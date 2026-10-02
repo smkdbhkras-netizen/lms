@@ -57,6 +57,25 @@
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
     
+    <!-- ===== BACKGROUND LOGIN LMS ===== -->
+    <script>
+    // Nama file gambar background (taruh di repo GitHub, folder yang sama dengan index.html).
+    // Kosongkan ('') kalau ingin kembali ke warna hijau polos.
+    window.LMS_BACKGROUND = 'background.jpg';
+    document.documentElement.style.setProperty('--lms-bg-img', window.LMS_BACKGROUND ? 'url("' + window.LMS_BACKGROUND + '")' : 'none');
+    </script>
+    <style>
+        /* Lapisan: overlay gelap tipis (agar teks terbaca) -> gambar background -> hijau polos (cadangan jika gambar belum ada) */
+        #viewLanding {
+            background-image: linear-gradient(rgba(6,78,59,.55), rgba(5,150,105,.40)), var(--lms-bg-img, none), linear-gradient(to bottom right, #065f46, #059669);
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+        }
+        #viewLogin {
+            background-image: linear-gradient(rgba(6,78,59,.35), rgba(6,78,59,.35)), var(--lms-bg-img, none), linear-gradient(#f1f5f9, #f1f5f9);
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+        }
+    </style>
+    <!-- ===== AKHIR BACKGROUND LOGIN ===== -->
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
