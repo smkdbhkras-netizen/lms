@@ -3,11 +3,33 @@
 <head>
     <!-- ===== JEMBATAN GITHUB -> GAS (satu-satunya tambahan; fitur lain tidak diubah) ===== -->
     <script>
-    // GANTI dengan URL Web App GAS Anda (Deploy > Manage deployments > Web app URL, berakhiran /exec)
+    // URL Web App GAS (Deploy > Manage deployments > Web app URL, berakhiran /exec)
     window.GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxYOjmntrm-TMvC6MLh2skxbaWjYvUvPcoECxMZXQ4rSVfFIWMJfX1qaEXarRnGxdlUqA/exec';
 
     // Meniru google.script.run agar seluruh kode lama tetap jalan apa adanya
     (function () {
+        var CACHE_KEY = 'lms_dash_cache_v1';
+        var FN_BACA = { cekLogin: 1, getDashboardData: 1 };   // selain ini = fungsi tulis (menghapus cache)
+
+        // Cache lokal HANYA untuk admin/guru (bukan siswa, agar aman di komputer bersama)
+        function bolehCache() {
+            try {
+                var s = JSON.parse(localStorage.getItem('bk_session') || 'null');
+                return !!(s && s.role && s.role !== 'siswa');
+            } catch (e) { return false; }
+        }
+        function kirim(fn, args) {
+            return fetch(window.GAS_API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ fn: fn, args: args || [] })
+            }).then(function (r) { return r.json(); });
+        }
+
+        // Bangunkan server GAS sejak halaman dibuka (mengurangi "cold start")
+        try { kirim('ping', []).catch(function () {}); } catch (e) {}
+
         function buatRunner(onOk, onFail) {
             return new Proxy({}, {
                 get: function (_, nama) {
@@ -16,18 +38,38 @@
                     if (nama === 'withUserObject') return function () { return buatRunner(onOk, onFail); };
                     return function () {
                         var args = Array.prototype.slice.call(arguments);
-                        fetch(window.GAS_API_URL, {
-                            method: 'POST',
-                            redirect: 'follow',
-                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                            body: JSON.stringify({ fn: nama, args: args })
-                        })
-                        .then(function (r) { return r.json(); })
+                        var isDash = (nama === 'getDashboardData');
+                        var cached = null;
+
+                        // Tampilkan data tersimpan LEBIH DULU (instan), lalu segarkan di belakang layar
+                        if (isDash && bolehCache()) {
+                            try { cached = localStorage.getItem(CACHE_KEY); } catch (e) { cached = null; }
+                            if (cached && onOk) {
+                                try {
+                                    var dataLama = JSON.parse(cached);
+                                    setTimeout(function () { onOk(dataLama); }, 0);
+                                } catch (e) { cached = null; }
+                            }
+                        }
+
+                        kirim(nama, args)
                         .then(function (j) {
-                            if (j && j.ok) { if (onOk) onOk(j.data); }
-                            else { throw new Error((j && j.error) || 'Server error'); }
+                            if (!(j && j.ok)) throw new Error((j && j.error) || 'Server error');
+                            var data = j.data;
+                            if (isDash) {
+                                var str = null;
+                                try { str = JSON.stringify(data); } catch (e) {}
+                                if (cached !== null && str === cached) return;   // data sama, tidak perlu render ulang
+                                if (str && data && data.success && bolehCache()) {
+                                    try { localStorage.setItem(CACHE_KEY, str); } catch (e) {}
+                                }
+                            } else if (!FN_BACA[nama]) {
+                                try { localStorage.removeItem(CACHE_KEY); } catch (e) {}   // data berubah -> buang cache
+                            }
+                            if (onOk) onOk(data);
                         })
                         .catch(function (err) {
+                            if (cached) return;   // data tersimpan sudah tampil, abaikan gagal segar
                             if (onFail) onFail(err);
                             else console.error('GAS error [' + nama + ']:', err);
                         });
