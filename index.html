@@ -1100,6 +1100,7 @@
         let G_KuisTimerInterval = null;
         let G_KuisSisaDetik = 0;
         let G_KuisWaktuMulai = 0;
+        let G_KuisDurasiTotal = 0;  // total durasi kuis (detik) untuk sesi berjalan
         let G_CurrentUser = null;
         let G_ActionPlanRenderTerakhir = { items: [], kelas: '' };
         let lmsInterval = null;
@@ -5932,7 +5933,10 @@ D. Medan</pre>
                     ? `<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center mb-3"><span class="text-[10px] text-emerald-600 font-bold uppercase tracking-wide block">Nilai Kamu</span><span class="text-2xl font-extrabold text-emerald-700">${myHasil[4]}</span></div>`
                     : '';
 
-                let actionBtn = sudahKerjakan
+                const sesiAktif = bacaSesiKuis(k[1]);
+                let actionBtn = sesiAktif
+                    ? `<button onclick="mulaiKuis('${k[1]}')" class="w-full bg-indigo-600 text-white hover:bg-indigo-700 font-bold py-3 rounded-xl transition text-sm shadow-md active:scale-[0.98] animate-pulse"><i class="fas fa-circle-play mr-1"></i> Lanjutkan Kuis</button>`
+                    : sudahKerjakan
                     ? `<button onclick="mulaiKuis('${k[1]}')" class="w-full bg-slate-100 text-slate-600 hover:bg-slate-200 font-bold py-3 rounded-xl transition text-sm active:scale-[0.98]"><i class="fas fa-rotate mr-1"></i> Kerjakan Ulang</button>`
                     : `<button onclick="mulaiKuis('${k[1]}')" class="w-full bg-amber-600 text-white hover:bg-amber-700 font-bold py-3 rounded-xl transition text-sm shadow-md active:scale-[0.98]"><i class="fas fa-play mr-1"></i> Mulai Kuis</button>`;
 
@@ -5952,6 +5956,100 @@ D. Medan</pre>
             });
         }
 
+        // ================= SESI KUIS TERSIMPAN (BISA DILANJUTKAN JIKA SISWA KELUAR) =================
+        function kuisSesiKey(kuisId) {
+            return 'kuis_sesi_' + ((G_CurrentUser && G_CurrentUser.nama) || '') + '_' + kuisId;
+        }
+
+        function simpanSesiKuis() {
+            try {
+                if (!G_KuisAktif || !G_CurrentUser) return;
+                localStorage.setItem(kuisSesiKey(G_KuisAktif.id), JSON.stringify({
+                    kuisId: G_KuisAktif.id,
+                    urutan: G_KuisSoalUrut,
+                    jawaban: G_JawabanKuisAktif,
+                    index: G_KuisSoalIndex,
+                    waktuMulai: G_KuisWaktuMulai,
+                    durasiTotal: G_KuisDurasiTotal
+                }));
+            } catch (e) {}
+        }
+
+        function hapusSesiKuis(kuisId) {
+            try { localStorage.removeItem(kuisSesiKey(kuisId)); } catch (e) {}
+        }
+
+        function bacaSesiKuis(kuisId) {
+            try {
+                if (!G_CurrentUser) return null;
+                const raw = localStorage.getItem(kuisSesiKey(kuisId));
+                if (!raw) return null;
+                const s = JSON.parse(raw);
+                const kuisRow = G_Kuis.find(k => k[1] === kuisId);
+                if (!kuisRow) return null;
+                let soal = [];
+                try { soal = JSON.parse(kuisRow[10] || '[]'); } catch (e) {}
+                // Sesi dianggap rusak/usang jika jumlah soal berubah (guru mengedit kuis)
+                if (!s || !Array.isArray(s.urutan) || !Array.isArray(s.jawaban) || !s.waktuMulai ||
+                    s.urutan.length !== soal.length || s.jawaban.length !== soal.length) {
+                    hapusSesiKuis(kuisId);
+                    return null;
+                }
+                return s;
+            } catch (e) { return null; }
+        }
+
+        function hitungSisaDetikSesi(s) {
+            const total = s.durasiTotal || 600;
+            return Math.max(0, total - Math.floor((Date.now() - s.waktuMulai) / 1000));
+        }
+
+        // Timer berbasis waktu mulai (bukan hitung mundur biasa) => tetap jalan walau siswa keluar & kembali
+        function tickKuis() {
+            if (!G_KuisAktif || !G_KuisTimerInterval) return;
+            G_KuisSisaDetik = Math.max(0, G_KuisDurasiTotal - Math.floor((Date.now() - G_KuisWaktuMulai) / 1000));
+            updateTampilanTimerKuis();
+            if (G_KuisSisaDetik <= 0) {
+                clearInterval(G_KuisTimerInterval);
+                G_KuisTimerInterval = null;
+                Swal.fire({ title: 'Waktu Habis!', text: 'Jawabanmu akan otomatis dikumpulkan.', icon: 'warning', confirmButtonColor: '#d97706', timer: 2000, showConfirmButton: false });
+                setTimeout(() => selesaikanKuis(true), 2000);
+            }
+        }
+
+        // Saat tab/aplikasi kembali aktif, langsung koreksi timer (browser HP sering menahan setInterval di background)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) tickKuis();
+        });
+
+        // Peringatan jika siswa tidak sengaja menutup/refresh halaman saat kuis berjalan
+        window.addEventListener('beforeunload', (e) => {
+            const view = document.getElementById('viewKuisPengerjaan');
+            if (G_KuisAktif && view && !view.classList.contains('hidden')) {
+                simpanSesiKuis();
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        function jalankanSesiKuis(kuisRow, soal, urutan, jawaban, index, waktuMulai, durasiTotal) {
+            G_KuisAktif = { id: kuisRow[1], judul: kuisRow[2], soal: soal, kkm: kuisRow[6], tampilkanKunci: (kuisRow[7] === 'YA'), durasiMenit: kuisRow[5] };
+            G_KuisSoalUrut = urutan;
+            G_JawabanKuisAktif = jawaban;
+            G_KuisSoalIndex = Math.min(Math.max(parseInt(index) || 0, 0), urutan.length - 1);
+            G_KuisWaktuMulai = waktuMulai;
+            G_KuisDurasiTotal = durasiTotal;
+            G_KuisSisaDetik = Math.max(0, durasiTotal - Math.floor((Date.now() - waktuMulai) / 1000));
+
+            document.getElementById('viewKuisPengerjaan').classList.remove('hidden');
+            document.getElementById('kuisJalanJudul').innerText = G_KuisAktif.judul;
+            renderSoalKuisAktif(); // sekaligus menyimpan sesi
+
+            if (G_KuisTimerInterval) clearInterval(G_KuisTimerInterval);
+            G_KuisTimerInterval = setInterval(tickKuis, 1000);
+            tickKuis();
+        }
+
         // ================= SISWA: PENGERJAAN KUIS =================
         function mulaiKuis(kuisId) {
             const kuisRow = G_Kuis.find(k => k[1] === kuisId);
@@ -5961,6 +6059,31 @@ D. Medan</pre>
             try { soal = JSON.parse(kuisRow[10] || '[]'); } catch (e) {}
             if (soal.length === 0) return Swal.fire('Info', 'Kuis ini belum memiliki soal.', 'info');
 
+            // ---- Ada sesi yang belum selesai? Lanjutkan, jangan mulai dari awal ----
+            const sesi = bacaSesiKuis(kuisId);
+            if (sesi) {
+                const bukaSesi = () => jalankanSesiKuis(kuisRow, soal, sesi.urutan, sesi.jawaban, sesi.index, sesi.waktuMulai, sesi.durasiTotal);
+                const sisa = hitungSisaDetikSesi(sesi);
+                if (sisa <= 0) {
+                    // Waktu sudah habis saat siswa keluar -> jawaban tersimpan otomatis dikumpulkan
+                    bukaSesi();
+                    return;
+                }
+                const dijawab = sesi.jawaban.filter(j => j !== null && j !== undefined).length;
+                const mm = String(Math.floor(sisa / 60)).padStart(2, '0'), ss = String(sisa % 60).padStart(2, '0');
+                Swal.fire({
+                    title: 'Lanjutkan Kuis?',
+                    html: `<div class="text-left text-sm text-gray-600 space-y-1">
+                        <p>Kamu masih punya kuis <b>${kuisRow[2]}</b> yang belum dikumpulkan.</p>
+                        <p><i class="fas fa-check-double w-5 text-gray-400"></i> Terjawab: <b>${dijawab} dari ${soal.length}</b> soal</p>
+                        <p><i class="fas fa-stopwatch w-5 text-gray-400"></i> Sisa waktu: <b>${mm}:${ss}</b></p>
+                        <p class="text-xs text-amber-600 mt-2"><i class="fas fa-triangle-exclamation mr-1"></i> Waktu tetap berjalan selama kamu keluar dari halaman.</p>
+                    </div>`,
+                    icon: 'question', showCancelButton: true, confirmButtonText: 'Lanjutkan', cancelButtonText: 'Nanti', confirmButtonColor: '#4f46e5'
+                }).then(res => { if (res.isConfirmed) bukaSesi(); });
+                return;
+            }
+
             const sandiAsli = (kuisRow[11] || '').toString();
 
             Swal.fire({
@@ -5968,7 +6091,7 @@ D. Medan</pre>
                 html: `<div class="text-left text-sm text-gray-600 space-y-1">
                     <p><i class="fas fa-list-ol w-5 text-gray-400"></i> ${soal.length} soal pilihan ganda</p>
                     <p><i class="fas fa-stopwatch w-5 text-gray-400"></i> Durasi: <b>${kuisRow[5]} menit</b> (otomatis dikumpulkan saat waktu habis)</p>
-                    <p class="text-xs text-amber-600 mt-2"><i class="fas fa-triangle-exclamation mr-1"></i> Pastikan koneksi internet stabil dan jangan menutup halaman ini selama mengerjakan.</p>
+                    <p class="text-xs text-amber-600 mt-2"><i class="fas fa-triangle-exclamation mr-1"></i> Pastikan koneksi internet stabil. Jika tidak sengaja keluar, buka lagi kuis ini untuk melanjutkan.</p>
                 </div>`,
                 icon: 'info', showCancelButton: true, confirmButtonText: 'Mulai Sekarang', cancelButtonText: 'Batal', confirmButtonColor: '#d97706',
                 input: sandiAsli ? 'password' : undefined,
@@ -5992,28 +6115,7 @@ D. Medan</pre>
                     }
                 }
 
-                G_KuisAktif = { id: kuisRow[1], judul: kuisRow[2], soal: soal, kkm: kuisRow[6], tampilkanKunci: (kuisRow[7] === 'YA'), durasiMenit: kuisRow[5] };
-                G_KuisSoalUrut = urutan;
-                G_JawabanKuisAktif = new Array(soal.length).fill(null);
-                G_KuisSoalIndex = 0;
-                G_KuisSisaDetik = (parseInt(kuisRow[5]) || 10) * 60;
-                G_KuisWaktuMulai = Date.now();
-
-                document.getElementById('viewKuisPengerjaan').classList.remove('hidden');
-                document.getElementById('kuisJalanJudul').innerText = G_KuisAktif.judul;
-                renderSoalKuisAktif();
-
-                if (G_KuisTimerInterval) clearInterval(G_KuisTimerInterval);
-                G_KuisTimerInterval = setInterval(() => {
-                    G_KuisSisaDetik--;
-                    updateTampilanTimerKuis();
-                    if (G_KuisSisaDetik <= 0) {
-                        clearInterval(G_KuisTimerInterval);
-                        Swal.fire({ title: 'Waktu Habis!', text: 'Jawabanmu akan otomatis dikumpulkan.', icon: 'warning', confirmButtonColor: '#d97706', timer: 2000, showConfirmButton: false });
-                        setTimeout(() => selesaikanKuis(true), 2000);
-                    }
-                }, 1000);
-                updateTampilanTimerKuis();
+                jalankanSesiKuis(kuisRow, soal, urutan, new Array(soal.length).fill(null), 0, Date.now(), (parseInt(kuisRow[5]) || 10) * 60);
             });
         }
 
@@ -6066,6 +6168,7 @@ D. Medan</pre>
             // sehingga siswa bisa mengumpulkan kapan saja walau waktu belum habis.
             document.getElementById('btnKuisSelesai').classList.remove('hidden');
             document.getElementById('btnKuisSelesai').classList.toggle('flex-1', isLast);
+            simpanSesiKuis(); // autosave agar bisa dilanjutkan jika keluar
         }
 
         function pilihJawabanKuis(opsiIndex) {
@@ -6089,7 +6192,8 @@ D. Medan</pre>
         function selesaikanKuis(otomatis) {
             const prosesKumpul = () => {
                 if (G_KuisTimerInterval) clearInterval(G_KuisTimerInterval);
-                let durasiDetik = Math.round((Date.now() - G_KuisWaktuMulai) / 1000);
+                G_KuisTimerInterval = null;
+                let durasiDetik = Math.min(Math.round((Date.now() - G_KuisWaktuMulai) / 1000), G_KuisDurasiTotal || Infinity);
                 let findSiswa = G_Siswa.find(s => s[2] === G_CurrentUser.nama);
                 let userKelas = findSiswa ? findSiswa[3] : '';
 
@@ -6102,6 +6206,7 @@ D. Medan</pre>
                         Swal.close();
                         document.getElementById('viewKuisPengerjaan').classList.add('hidden');
                         if (res.success) {
+                            hapusSesiKuis(G_KuisAktif.id);
                             tampilkanHasilKuis(res);
                             loadDashboardData();
                         } else {
@@ -6124,6 +6229,7 @@ D. Medan</pre>
                     let rowHasil = [new Date(), G_KuisAktif.id, G_CurrentUser.nama, userKelas, skor, benar, total, JSON.stringify(G_JawabanKuisAktif), durasiDetik];
                     if (idxHasil !== -1) G_HasilKuis[idxHasil] = rowHasil; else G_HasilKuis.push(rowHasil);
                     localStorage.setItem('dummy_hasil_kuis', JSON.stringify(G_HasilKuis));
+                    hapusSesiKuis(G_KuisAktif.id);
 
                     Swal.close();
                     document.getElementById('viewKuisPengerjaan').classList.add('hidden');
