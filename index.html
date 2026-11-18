@@ -5866,34 +5866,290 @@ D. Medan</pre>
             });
         }
 
-        function lihatHasilKuis(kuisId, judul) {
-            let hasil = G_HasilKuis.filter(h => h[1] === kuisId).sort((a, b) => (b[4] || 0) - (a[4] || 0));
-            let kuisRow = G_Kuis.find(k => k[1] === kuisId);
-            let kkm = kuisRow ? kuisRow[6] : '';
+        // ================= GURU: REKAP NILAI KUIS (FILTER + EKSPOR) =================
+        let G_RekapKuis = { kuisId: '', judul: '', kkm: '', semua: [] };
 
-            let rows = hasil.length === 0
-                ? `<tr><td colspan="4" class="p-4 text-center text-gray-400 italic text-xs">Belum ada siswa yang mengerjakan.</td></tr>`
-                : hasil.map(h => {
-                    let lulus = kkm !== '' && kkm !== undefined ? (h[4] >= parseFloat(kkm)) : null;
-                    let badge = lulus === null ? '' : (lulus ? `<span class="text-[10px] font-bold text-emerald-600">LULUS</span>` : `<span class="text-[10px] font-bold text-red-500">BELUM LULUS</span>`);
+        function rekapEsc(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function rekapStatus(h) {
+            const kkm = G_RekapKuis.kkm;
+            if (kkm === '' || kkm === undefined || kkm === null) return '';
+            return parseFloat(h[4]) >= parseFloat(kkm) ? 'LULUS' : 'BELUM LULUS';
+        }
+
+        function rekapDurasi(d) {
+            d = parseInt(d);
+            if (isNaN(d)) return '-';
+            return String(Math.floor(d / 60)).padStart(2, '0') + ':' + String(d % 60).padStart(2, '0');
+        }
+
+        function rekapWaktu(v) {
+            try {
+                const d = new Date(v);
+                if (isNaN(d.getTime())) return String(v || '');
+                return d.toLocaleString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            } catch (e) { return String(v || ''); }
+        }
+
+        function rekapPesan(teks) {
+            const el = document.getElementById('rekapPesan');
+            if (el) { el.innerText = teks || ''; }
+        }
+
+        function rekapDataTerfilter() {
+            const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+            const q = val('rekapCari').trim().toLowerCase();
+            const kelas = val('rekapKelas');
+            const status = val('rekapStatus');
+            const urut = val('rekapUrut') || 'nilai_desc';
+
+            let data = G_RekapKuis.semua.filter(h => {
+                if (q && !String(h[2] || '').toLowerCase().includes(q)) return false;
+                if (kelas && String(h[3] || '') !== kelas) return false;
+                if (status && rekapStatus(h) !== status) return false;
+                return true;
+            });
+
+            data.sort((a, b) => {
+                if (urut === 'nilai_asc') return (parseFloat(a[4]) || 0) - (parseFloat(b[4]) || 0);
+                if (urut === 'nama_asc') return String(a[2] || '').localeCompare(String(b[2] || ''), 'id');
+                if (urut === 'kelas_asc') return String(a[3] || '').localeCompare(String(b[3] || ''), 'id') || String(a[2] || '').localeCompare(String(b[2] || ''), 'id');
+                return (parseFloat(b[4]) || 0) - (parseFloat(a[4]) || 0);
+            });
+            return data;
+        }
+
+        function rekapRingkasan(data) {
+            const n = data.length;
+            const nilai = data.map(h => parseFloat(h[4]) || 0);
+            const rata = n ? Math.round((nilai.reduce((a, b) => a + b, 0) / n) * 10) / 10 : 0;
+            const tinggi = n ? Math.max.apply(null, nilai) : 0;
+            const rendah = n ? Math.min.apply(null, nilai) : 0;
+            const lulus = data.filter(h => rekapStatus(h) === 'LULUS').length;
+            const adaKkm = G_RekapKuis.kkm !== '' && G_RekapKuis.kkm !== undefined && G_RekapKuis.kkm !== null;
+            return { n, rata, tinggi, rendah, lulus, belum: adaKkm ? n - lulus : 0, adaKkm };
+        }
+
+        function rekapRender() {
+            const data = rekapDataTerfilter();
+            const r = rekapRingkasan(data);
+            const body = document.getElementById('rekapBody');
+            if (!body) return;
+
+            body.innerHTML = data.length === 0
+                ? `<tr><td colspan="6" class="p-4 text-center text-gray-400 italic text-xs">Tidak ada data yang cocok dengan filter.</td></tr>`
+                : data.map((h, i) => {
+                    const st = rekapStatus(h);
+                    const badge = st === '' ? '' : (st === 'LULUS' ? `<span class="text-[10px] font-bold text-emerald-600">LULUS</span>` : `<span class="text-[10px] font-bold text-red-500">BELUM LULUS</span>`);
                     return `<tr class="border-b border-gray-50">
-                        <td class="p-2 text-left text-xs font-bold text-gray-700">${h[2]}</td>
-                        <td class="p-2 text-center text-xs text-gray-500">${h[3] || '-'}</td>
-                        <td class="p-2 text-center text-sm font-bold text-indigo-600">${h[4]}</td>
-                        <td class="p-2 text-center text-[11px] text-gray-500">${h[5]}/${h[6]} benar<br>${badge}</td>
+                        <td class="p-2 text-center text-xs text-gray-400">${i + 1}</td>
+                        <td class="p-2 text-left text-xs font-bold text-gray-700">${rekapEsc(h[2])}</td>
+                        <td class="p-2 text-center text-xs text-gray-500">${rekapEsc(h[3] || '-')}</td>
+                        <td class="p-2 text-center text-sm font-bold text-indigo-600">${rekapEsc(h[4])}</td>
+                        <td class="p-2 text-center text-[11px] text-gray-500">${rekapEsc(h[5])}/${rekapEsc(h[6])} benar<br>${badge}</td>
+                        <td class="p-2 text-center text-[11px] text-gray-500">${rekapDurasi(h[8])}</td>
                     </tr>`;
                 }).join('');
 
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
+            set('rekapSumPeserta', r.n);
+            set('rekapSumRata', r.rata);
+            set('rekapSumTinggi', r.tinggi);
+            set('rekapSumRendah', r.rendah);
+            set('rekapSumLulus', r.adaKkm ? `${r.lulus}/${r.n}` : '-');
+            rekapPesan('');
+        }
+
+        function rekapResetFilter() {
+            ['rekapCari', 'rekapKelas', 'rekapStatus'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+            const u = document.getElementById('rekapUrut'); if (u) u.value = 'nilai_desc';
+            rekapRender();
+        }
+
+        function rekapNamaFile(ext) {
+            return 'Rekap_Nilai_' + String(G_RekapKuis.judul || 'Kuis').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '') + '.' + ext;
+        }
+
+        function rekapBarisTabel(data) {
+            return data.map((h, i) => [i + 1, h[2] || '', h[3] || '', parseFloat(h[4]) || 0, parseInt(h[5]) || 0, parseInt(h[6]) || 0, rekapStatus(h) || '-', rekapDurasi(h[8]), rekapWaktu(h[0])]);
+        }
+
+        function rekapDeskripsiFilter() {
+            const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+            const bagian = [];
+            if (val('rekapKelas')) bagian.push('Kelas: ' + val('rekapKelas'));
+            if (val('rekapStatus')) bagian.push('Status: ' + val('rekapStatus'));
+            if (val('rekapCari').trim()) bagian.push('Cari nama: ' + val('rekapCari').trim());
+            return bagian.length ? bagian.join(' | ') : 'Semua data';
+        }
+
+        function rekapEksporExcel() {
+            if (typeof XLSX === 'undefined') return rekapPesan('Pustaka Excel belum termuat. Periksa koneksi internet lalu muat ulang halaman.');
+            const data = rekapDataTerfilter();
+            if (data.length === 0) return rekapPesan('Tidak ada data untuk diunduh.');
+            const r = rekapRingkasan(data);
+            const aoa = [
+                ['REKAP NILAI KUIS ONLINE'],
+                ['Judul Kuis', G_RekapKuis.judul],
+                ['KKM', G_RekapKuis.kkm === '' || G_RekapKuis.kkm == null ? '-' : G_RekapKuis.kkm],
+                ['Filter', rekapDeskripsiFilter()],
+                ['Jumlah Peserta', r.n, 'Rata-rata', r.rata, 'Tertinggi', r.tinggi, 'Terendah', r.rendah],
+                [],
+                ['No', 'Nama', 'Kelas', 'Nilai', 'Benar', 'Jumlah Soal', 'Status', 'Durasi (mm:ss)', 'Waktu Mengumpulkan']
+            ].concat(rekapBarisTabel(data));
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!cols'] = [{ wch: 5 }, { wch: 36 }, { wch: 18 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 20 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Rekap Nilai');
+            XLSX.writeFile(wb, rekapNamaFile('xlsx'));
+            rekapPesan('File Excel berhasil diunduh.');
+        }
+
+        function rekapEksporCSV() {
+            const data = rekapDataTerfilter();
+            if (data.length === 0) return rekapPesan('Tidak ada data untuk diunduh.');
+            const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+            const baris = [['No', 'Nama', 'Kelas', 'Nilai', 'Benar', 'Jumlah Soal', 'Status', 'Durasi (mm:ss)', 'Waktu Mengumpulkan']].concat(rekapBarisTabel(data));
+            const csv = '\uFEFF' + baris.map(r => r.map(q).join(';')).join('\r\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = rekapNamaFile('csv');
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            rekapPesan('File CSV berhasil diunduh.');
+        }
+
+        function rekapEksporPDF() {
+            if (typeof window.jspdf === 'undefined') return rekapPesan('Pustaka PDF belum termuat. Periksa koneksi internet lalu muat ulang halaman.');
+            const data = rekapDataTerfilter();
+            if (data.length === 0) return rekapPesan('Tidak ada data untuk diunduh.');
+            try {
+                const r = rekapRingkasan(data);
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'pt', 'a4');
+                const kolom = [{ t: 'No', x: 40 }, { t: 'Nama', x: 70 }, { t: 'Kelas', x: 300 }, { t: 'Nilai', x: 405 }, { t: 'Benar', x: 450 }, { t: 'Status', x: 495 }];
+
+                const gambarHeader = (y) => {
+                    doc.setFillColor(243, 244, 246);
+                    doc.rect(36, y - 12, 523, 20, 'F');
+                    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(75, 85, 99);
+                    kolom.forEach(k => doc.text(k.t, k.x, y + 2));
+                };
+
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(17, 24, 39);
+                doc.text('REKAP NILAI KUIS ONLINE', 40, 48);
+                doc.setFontSize(11);
+                doc.text(doc.splitTextToSize(String(G_RekapKuis.judul || ''), 515)[0], 40, 66);
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(75, 85, 99);
+                const kkmTxt = (G_RekapKuis.kkm === '' || G_RekapKuis.kkm == null) ? '-' : G_RekapKuis.kkm;
+                doc.text(`KKM: ${kkmTxt}   |   Peserta: ${r.n}   |   Rata-rata: ${r.rata}   |   Tertinggi: ${r.tinggi}   |   Terendah: ${r.rendah}`, 40, 82);
+                doc.text('Filter: ' + doc.splitTextToSize(rekapDeskripsiFilter(), 470)[0], 40, 95);
+
+                let y = 120;
+                gambarHeader(y);
+                y += 22;
+                doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(31, 41, 55);
+
+                rekapBarisTabel(data).forEach(row => {
+                    if (y > 800) {
+                        doc.addPage();
+                        y = 50;
+                        gambarHeader(y);
+                        y += 22;
+                        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(31, 41, 55);
+                    }
+                    doc.text(String(row[0]), kolom[0].x, y);
+                    doc.text(doc.splitTextToSize(String(row[1]), 225)[0], kolom[1].x, y);
+                    doc.text(doc.splitTextToSize(String(row[2]), 100)[0], kolom[2].x, y);
+                    doc.text(String(row[3]), kolom[3].x, y);
+                    doc.text(row[4] + '/' + row[5], kolom[4].x, y);
+                    doc.text(String(row[6]), kolom[5].x, y);
+                    doc.setDrawColor(229, 231, 235); doc.line(36, y + 5, 559, y + 5);
+                    y += 18;
+                });
+
+                const jml = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= jml; i++) {
+                    doc.setPage(i); doc.setFontSize(8); doc.setTextColor(156, 163, 175);
+                    doc.text(`Dicetak ${new Date().toLocaleString('id-ID')}  -  Halaman ${i}/${jml}`, 40, 825);
+                }
+                doc.save(rekapNamaFile('pdf'));
+                rekapPesan('File PDF berhasil diunduh.');
+            } catch (e) {
+                rekapPesan('Gagal membuat PDF: ' + e.message);
+            }
+        }
+
+        function lihatHasilKuis(kuisId, judul) {
+            const kuisRow = G_Kuis.find(k => k[1] === kuisId);
+            G_RekapKuis = {
+                kuisId: kuisId,
+                judul: judul || (kuisRow ? kuisRow[2] : ''),
+                kkm: kuisRow ? kuisRow[6] : '',
+                semua: G_HasilKuis.filter(h => h[1] === kuisId)
+            };
+
+            if (G_RekapKuis.semua.length === 0) {
+                return Swal.fire({ title: 'Rekap Nilai: ' + rekapEsc(G_RekapKuis.judul), text: 'Belum ada siswa yang mengerjakan.', icon: 'info', confirmButtonText: 'Tutup', confirmButtonColor: '#d97706' });
+            }
+
+            const daftarKelas = Array.from(new Set(G_RekapKuis.semua.map(h => String(h[3] || '')).filter(x => x))).sort((a, b) => a.localeCompare(b, 'id'));
+            const inputCls = 'w-full rounded-lg border border-gray-200 p-2 text-xs focus:ring-2 focus:ring-amber-500 outline-none bg-white';
+            const adaKkm = G_RekapKuis.kkm !== '' && G_RekapKuis.kkm !== undefined && G_RekapKuis.kkm !== null;
+
             Swal.fire({
-                title: 'Rekap Nilai: ' + judul,
-                width: 560,
-                html: `<div class="text-left max-h-[60vh] overflow-y-auto">
-                    <table class="w-full text-sm border-collapse">
-                        <thead class="bg-gray-50 text-gray-500 text-[10px] uppercase sticky top-0"><tr><th class="p-2 text-left">Nama</th><th class="p-2">Kelas</th><th class="p-2">Nilai</th><th class="p-2">Detail</th></tr></thead>
-                        <tbody>${rows}</tbody>
-                    </table>
+                title: 'Rekap Nilai: ' + rekapEsc(G_RekapKuis.judul),
+                width: 820,
+                html: `<div class="text-left">
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
+                        <div class="bg-gray-50 border border-gray-100 rounded-lg p-2 text-center"><div class="text-[9px] uppercase font-bold text-gray-400">Peserta</div><div id="rekapSumPeserta" class="text-base font-extrabold text-gray-700">0</div></div>
+                        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-2 text-center"><div class="text-[9px] uppercase font-bold text-indigo-400">Rata-rata</div><div id="rekapSumRata" class="text-base font-extrabold text-indigo-700">0</div></div>
+                        <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-2 text-center"><div class="text-[9px] uppercase font-bold text-emerald-500">Tertinggi</div><div id="rekapSumTinggi" class="text-base font-extrabold text-emerald-700">0</div></div>
+                        <div class="bg-red-50 border border-red-100 rounded-lg p-2 text-center"><div class="text-[9px] uppercase font-bold text-red-400">Terendah</div><div id="rekapSumRendah" class="text-base font-extrabold text-red-600">0</div></div>
+                        <div class="bg-amber-50 border border-amber-100 rounded-lg p-2 text-center col-span-2 sm:col-span-1"><div class="text-[9px] uppercase font-bold text-amber-500">Lulus${adaKkm ? ' (KKM ' + rekapEsc(G_RekapKuis.kkm) + ')' : ''}</div><div id="rekapSumLulus" class="text-base font-extrabold text-amber-700">-</div></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                        <input id="rekapCari" type="text" placeholder="Cari nama siswa..." class="${inputCls} col-span-2 sm:col-span-1" oninput="rekapRender()">
+                        <select id="rekapKelas" class="${inputCls}" onchange="rekapRender()">
+                            <option value="">Semua Kelas</option>
+                            ${daftarKelas.map(k => `<option value="${rekapEsc(k)}">${rekapEsc(k)}</option>`).join('')}
+                        </select>
+                        <select id="rekapStatus" class="${inputCls}" onchange="rekapRender()">
+                            <option value="">Semua Status</option>
+                            <option value="LULUS">Lulus</option>
+                            <option value="BELUM LULUS">Belum Lulus</option>
+                        </select>
+                        <select id="rekapUrut" class="${inputCls}" onchange="rekapRender()">
+                            <option value="nilai_desc">Nilai tertinggi</option>
+                            <option value="nilai_asc">Nilai terendah</option>
+                            <option value="nama_asc">Nama A-Z</option>
+                            <option value="kelas_asc">Kelas, lalu nama</option>
+                        </select>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <button type="button" onclick="rekapResetFilter()" class="text-xs bg-gray-100 text-gray-600 font-bold px-3 py-2 rounded-lg hover:bg-gray-200 transition"><i class="fas fa-rotate-left mr-1"></i> Reset</button>
+                        <span class="flex-1"></span>
+                        <button type="button" onclick="rekapEksporExcel()" class="text-xs bg-emerald-600 text-white font-bold px-3 py-2 rounded-lg hover:bg-emerald-700 transition"><i class="fas fa-file-excel mr-1"></i> Excel</button>
+                        <button type="button" onclick="rekapEksporPDF()" class="text-xs bg-red-600 text-white font-bold px-3 py-2 rounded-lg hover:bg-red-700 transition"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
+                        <button type="button" onclick="rekapEksporCSV()" class="text-xs bg-slate-600 text-white font-bold px-3 py-2 rounded-lg hover:bg-slate-700 transition"><i class="fas fa-file-csv mr-1"></i> CSV</button>
+                    </div>
+                    <p id="rekapPesan" class="text-[11px] text-emerald-600 font-semibold min-h-[14px] mb-1"></p>
+
+                    <div class="max-h-[42vh] overflow-y-auto border border-gray-100 rounded-lg">
+                        <table class="w-full text-sm border-collapse">
+                            <thead class="bg-gray-50 text-gray-500 text-[10px] uppercase sticky top-0"><tr><th class="p-2 w-8">No</th><th class="p-2 text-left">Nama</th><th class="p-2">Kelas</th><th class="p-2">Nilai</th><th class="p-2">Detail</th><th class="p-2">Durasi</th></tr></thead>
+                            <tbody id="rekapBody"></tbody>
+                        </table>
+                    </div>
+                    <p class="text-[10px] text-gray-400 mt-2">Unduhan mengikuti filter yang sedang aktif.</p>
                 </div>`,
-                confirmButtonText: 'Tutup', confirmButtonColor: '#d97706'
+                confirmButtonText: 'Tutup', confirmButtonColor: '#d97706',
+                didOpen: () => rekapRender()
             });
         }
 
