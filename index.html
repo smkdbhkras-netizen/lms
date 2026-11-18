@@ -899,36 +899,78 @@
          </div>
 
         <!-- ================= VIEW: KUIS ONLINE - PENGERJAAN (FULLSCREEN OVERLAY) ================= -->
-        <div id="viewKuisPengerjaan" class="hidden fixed inset-0 z-[9999] bg-slate-50 overflow-y-auto no-print">
-            <div class="max-w-2xl mx-auto min-h-screen flex flex-col p-3 sm:p-5">
-                <!-- Header: Judul + Timer -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 flex items-center justify-between gap-3 sticky top-3 z-10 mb-4">
-                    <div class="min-w-0">
-                        <h3 id="kuisJalanJudul" class="font-bold text-gray-800 text-sm sm:text-base truncate">Judul Kuis</h3>
-                        <p id="kuisJalanProgress" class="text-[11px] sm:text-xs text-gray-500 font-medium">Soal 1 dari 10</p>
+        <div id="viewKuisPengerjaan" class="hidden fixed inset-0 z-[9999] bg-gradient-to-b from-slate-50 via-white to-indigo-50/50 no-print">
+            <style>
+                .kuis-fade { animation: kuisFade .28s ease; }
+                @keyframes kuisFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+                .kuis-nav-scroll { scrollbar-width: thin; }
+                .kuis-nav-scroll::-webkit-scrollbar { height: 5px; }
+                .kuis-nav-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+            </style>
+            <div class="h-full flex flex-col">
+
+                <!-- Header: judul, progres, ukuran teks, timer -->
+                <header class="bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm shrink-0" style="padding-top: env(safe-area-inset-top, 0px);">
+                    <div class="max-w-3xl mx-auto px-3 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
+                        <div class="hidden sm:flex w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white items-center justify-center shrink-0 shadow-sm"><i class="fas fa-pen-to-square"></i></div>
+                        <div class="min-w-0 flex-1">
+                            <h3 id="kuisJalanJudul" class="font-extrabold text-gray-800 text-sm sm:text-base truncate">Judul Kuis</h3>
+                            <p class="text-[11px] sm:text-xs text-gray-500 font-medium"><span id="kuisJalanProgress">Soal 1 dari 10</span> <span class="text-gray-300 mx-0.5">&bull;</span> <span class="text-emerald-600 font-bold"><span id="kuisJalanDijawab">0</span> terjawab</span></p>
+                        </div>
+                        <div class="flex items-center bg-gray-50 border border-gray-200 rounded-lg overflow-hidden shrink-0" title="Ukuran teks soal">
+                            <button type="button" onclick="ubahUkuranTeksKuis(-1)" class="px-2 py-1.5 text-[11px] font-bold text-gray-500 hover:bg-gray-100 active:bg-gray-200">A-</button>
+                            <button type="button" onclick="ubahUkuranTeksKuis(1)" class="px-2 py-1.5 text-sm font-bold text-gray-600 hover:bg-gray-100 active:bg-gray-200 border-l border-gray-200">A+</button>
+                        </div>
+                        <div id="kuisJalanTimerBox" class="shrink-0 rounded-xl px-3 py-1.5 text-center border bg-indigo-50 border-indigo-100 text-indigo-700">
+                            <div class="text-[9px] font-bold uppercase tracking-wide opacity-70"><i class="fas fa-stopwatch mr-0.5"></i>Sisa Waktu</div>
+                            <div id="kuisJalanTimer" class="font-mono font-extrabold text-base sm:text-lg leading-none mt-0.5">00:00</div>
+                        </div>
                     </div>
-                    <div class="shrink-0 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-center">
-                        <div class="text-[9px] text-red-500 font-bold uppercase tracking-wide">Sisa Waktu</div>
-                        <div id="kuisJalanTimer" class="text-red-600 font-mono font-bold text-base sm:text-lg leading-none">00:00</div>
+                    <div class="h-1 bg-gray-100"><div id="kuisJalanBar" class="h-1 bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-500" style="width: 0%"></div></div>
+                </header>
+
+                <!-- Konten (area yang di-scroll) -->
+                <main id="kuisJalanScroll" class="flex-1 overflow-y-auto">
+                    <div class="max-w-3xl mx-auto px-3 sm:px-5 py-4 space-y-4">
+
+                        <!-- Navigator nomor soal -->
+                        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wide"><i class="fas fa-table-cells mr-1"></i> Navigasi Soal</span>
+                                <button type="button" id="btnKuisToggleNav" onclick="toggleNavigatorKuis()" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800">Lihat semua</button>
+                            </div>
+                            <div id="kuisJalanNavigator" class="relative flex gap-1.5 overflow-x-auto py-1.5 px-1 kuis-nav-scroll"></div>
+                            <div class="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[10px] text-gray-400 font-medium">
+                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-indigo-600"></span> Sekarang</span>
+                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-200 border border-emerald-400"></span> Terjawab</span>
+                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-amber-200 border border-amber-400"></span> Ragu-ragu</span>
+                                <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-white border border-gray-300"></span> Belum</span>
+                            </div>
+                        </div>
+
+                        <!-- Kartu soal -->
+                        <section id="kuisJalanKartu" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-7">
+                            <div class="flex items-center justify-between gap-2 mb-4">
+                                <span id="kuisJalanNomorBadge" class="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-full">Soal 1</span>
+                                <button type="button" id="btnKuisRagu" onclick="toggleRaguKuis()" class="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border transition bg-white text-gray-500 border-gray-200 hover:bg-amber-50"><i class="fas fa-flag"></i> Ragu-ragu</button>
+                            </div>
+                            <img id="kuisJalanGambarSoal" class="hidden w-full max-h-80 object-contain rounded-xl border border-gray-200 bg-white mb-4">
+                            <p id="kuisJalanPertanyaan" class="font-semibold text-gray-800 leading-relaxed whitespace-pre-line mb-5" style="font-size: 1rem; line-height: 1.7;"></p>
+                            <div id="kuisJalanOpsi" class="space-y-3"></div>
+                        </section>
+
+                        <p class="hidden sm:block text-center text-[11px] text-gray-400 pb-2">Tips: tekan huruf <b>A-D</b> untuk memilih jawaban, tombol <b>&larr; &rarr;</b> untuk pindah soal.</p>
                     </div>
-                </div>
+                </main>
 
-                <!-- Navigator nomor soal -->
-                <div id="kuisJalanNavigator" class="flex flex-wrap gap-1.5 mb-4"></div>
-
-                <!-- Kartu Soal -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 flex-1">
-                    <img id="kuisJalanGambarSoal" class="hidden w-full max-h-72 object-contain rounded-xl border border-gray-200 bg-white mb-4">
-                    <p id="kuisJalanPertanyaan" class="text-sm sm:text-base font-semibold text-gray-800 leading-relaxed mb-5 whitespace-pre-line"></p>
-                    <div id="kuisJalanOpsi" class="space-y-2.5"></div>
-                </div>
-
-                <!-- Navigasi Bawah -->
-                <div class="flex gap-2 mt-4 pb-4">
-                    <button onclick="navigasiSoalKuis(-1)" class="bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold px-4 py-3 rounded-xl text-sm transition active:scale-95"><i class="fas fa-chevron-left"></i></button>
-                    <button id="btnKuisNext" onclick="navigasiSoalKuis(1)" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm transition active:scale-95">Soal Berikutnya <i class="fas fa-chevron-right ml-1"></i></button>
-                    <button id="btnKuisSelesai" onclick="selesaikanKuis(false)" class="hidden flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm transition active:scale-95"><i class="fas fa-check-circle mr-1"></i> Selesai & Kumpulkan</button>
-                </div>
+                <!-- Bar navigasi bawah (selalu terlihat) -->
+                <footer class="bg-white/95 backdrop-blur border-t border-gray-100 shrink-0 shadow-[0_-4px_16px_rgba(15,23,42,0.05)]" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+                    <div class="max-w-3xl mx-auto px-3 sm:px-5 py-3 flex gap-2">
+                        <button type="button" id="btnKuisPrev" onclick="navigasiSoalKuis(-1)" class="bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold px-4 py-3 rounded-xl text-sm transition active:scale-95 whitespace-nowrap"><i class="fas fa-chevron-left"></i><span class="hidden sm:inline ml-1.5">Sebelumnya</span></button>
+                        <button type="button" id="btnKuisNext" onclick="navigasiSoalKuis(1)" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold py-3 rounded-xl text-sm transition active:scale-95 shadow-md shadow-indigo-200 whitespace-nowrap">Soal Berikutnya <i class="fas fa-chevron-right ml-1"></i></button>
+                        <button type="button" id="btnKuisSelesai" onclick="selesaikanKuis(false)" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-3 rounded-xl text-sm transition active:scale-95 shadow-md shadow-emerald-200 whitespace-nowrap"><i class="fas fa-check-circle mr-1"></i><span id="btnKuisSelesaiLabel">Kumpulkan</span></button>
+                    </div>
+                </footer>
             </div>
         </div>
 
@@ -1101,6 +1143,12 @@
         let G_KuisSisaDetik = 0;
         let G_KuisWaktuMulai = 0;
         let G_KuisDurasiTotal = 0;  // total durasi kuis (detik) untuk sesi berjalan
+        let G_KuisRagu = [];        // penanda ragu-ragu per soal (index asli soal)
+        let G_KuisNavExpanded = false; // navigator nomor soal: ringkas (1 baris) / tampil semua
+        let G_KuisRenderTerakhir = -1; // untuk animasi saat pindah soal
+        const KUIS_FONT_SIZES = ['0.875rem', '1rem', '1.125rem', '1.3rem'];
+        let G_KuisFontIdx = 1;      // ukuran teks soal (disimpan di browser)
+        try { const f = parseInt(localStorage.getItem('kuis_font_idx')); if (!isNaN(f) && f >= 0 && f < KUIS_FONT_SIZES.length) G_KuisFontIdx = f; } catch (e) {}
         let G_CurrentUser = null;
         let G_ActionPlanRenderTerakhir = { items: [], kelas: '' };
         let lmsInterval = null;
@@ -6225,6 +6273,7 @@ D. Medan</pre>
                     urutan: G_KuisSoalUrut,
                     jawaban: G_JawabanKuisAktif,
                     index: G_KuisSoalIndex,
+                    ragu: G_KuisRagu,
                     waktuMulai: G_KuisWaktuMulai,
                     durasiTotal: G_KuisDurasiTotal
                 }));
@@ -6288,10 +6337,13 @@ D. Medan</pre>
             }
         });
 
-        function jalankanSesiKuis(kuisRow, soal, urutan, jawaban, index, waktuMulai, durasiTotal) {
+        function jalankanSesiKuis(kuisRow, soal, urutan, jawaban, index, waktuMulai, durasiTotal, ragu) {
             G_KuisAktif = { id: kuisRow[1], judul: kuisRow[2], soal: soal, kkm: kuisRow[6], tampilkanKunci: (kuisRow[7] === 'YA'), durasiMenit: kuisRow[5] };
             G_KuisSoalUrut = urutan;
             G_JawabanKuisAktif = jawaban;
+            G_KuisRagu = (Array.isArray(ragu) && ragu.length === urutan.length) ? ragu : new Array(urutan.length).fill(false);
+            G_KuisNavExpanded = false;
+            G_KuisRenderTerakhir = -1;
             G_KuisSoalIndex = Math.min(Math.max(parseInt(index) || 0, 0), urutan.length - 1);
             G_KuisWaktuMulai = waktuMulai;
             G_KuisDurasiTotal = durasiTotal;
@@ -6318,7 +6370,7 @@ D. Medan</pre>
             // ---- Ada sesi yang belum selesai? Lanjutkan, jangan mulai dari awal ----
             const sesi = bacaSesiKuis(kuisId);
             if (sesi) {
-                const bukaSesi = () => jalankanSesiKuis(kuisRow, soal, sesi.urutan, sesi.jawaban, sesi.index, sesi.waktuMulai, sesi.durasiTotal);
+                const bukaSesi = () => jalankanSesiKuis(kuisRow, soal, sesi.urutan, sesi.jawaban, sesi.index, sesi.waktuMulai, sesi.durasiTotal, sesi.ragu);
                 const sisa = hitungSisaDetikSesi(sesi);
                 if (sisa <= 0) {
                     // Waktu sudah habis saat siswa keluar -> jawaban tersimpan otomatis dikumpulkan
@@ -6377,10 +6429,19 @@ D. Medan</pre>
 
         function updateTampilanTimerKuis() {
             let m = Math.floor(G_KuisSisaDetik / 60), s = G_KuisSisaDetik % 60;
-            let el = document.getElementById('kuisJalanTimer');
-            if (el) {
-                el.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-                el.parentElement.classList.toggle('animate-pulse', G_KuisSisaDetik <= 30);
+            const el = document.getElementById('kuisJalanTimer');
+            const box = document.getElementById('kuisJalanTimerBox');
+            if (el) el.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            if (box) {
+                let warna = 'bg-indigo-50 border-indigo-100 text-indigo-700';
+                if (G_KuisSisaDetik <= 60) warna = 'bg-red-50 border-red-300 text-red-600 animate-pulse';
+                else if (G_KuisSisaDetik <= 300) warna = 'bg-red-50 border-red-200 text-red-600';
+                else if (G_KuisSisaDetik <= 600) warna = 'bg-amber-50 border-amber-200 text-amber-700';
+                box.className = 'shrink-0 rounded-xl px-3 py-1.5 text-center border transition-colors ' + warna;
+            }
+            // Pengingat halus saat waktu hampir habis (tidak menimpa dialog yang sedang terbuka)
+            if ((G_KuisSisaDetik === 300 || G_KuisSisaDetik === 60) && G_KuisAktif && !(typeof Swal !== 'undefined' && Swal.isVisible())) {
+                Swal.fire({ toast: true, position: 'top', icon: 'warning', title: G_KuisSisaDetik === 300 ? 'Sisa waktu 5 menit' : 'Sisa waktu 1 menit', showConfirmButton: false, timer: 3500 });
             }
         }
 
@@ -6388,9 +6449,18 @@ D. Medan</pre>
             const total = G_KuisSoalUrut.length;
             const soalIdx = G_KuisSoalUrut[G_KuisSoalIndex];
             const soal = G_KuisAktif.soal[soalIdx];
+            const fs = KUIS_FONT_SIZES[G_KuisFontIdx] || '1rem';
+            const adaJawab = j => j !== null && j !== undefined;
+            const dijawabJml = G_JawabanKuisAktif.filter(adaJawab).length;
 
             document.getElementById('kuisJalanProgress').innerText = `Soal ${G_KuisSoalIndex + 1} dari ${total}`;
-            document.getElementById('kuisJalanPertanyaan').innerText = soal.pertanyaan || '';
+            document.getElementById('kuisJalanDijawab').innerText = dijawabJml;
+            document.getElementById('kuisJalanBar').style.width = (total ? (dijawabJml / total) * 100 : 0) + '%';
+            document.getElementById('kuisJalanNomorBadge').innerHTML = `<i class="fas fa-circle-question"></i> Soal ${G_KuisSoalIndex + 1}`;
+
+            const qEl = document.getElementById('kuisJalanPertanyaan');
+            qEl.innerText = soal.pertanyaan || '';
+            qEl.style.fontSize = fs;
 
             const gambarSoalEl = document.getElementById('kuisJalanGambarSoal');
             if (soal.gambarSoal) { gambarSoalEl.src = soal.gambarSoal; gambarSoalEl.classList.remove('hidden'); }
@@ -6399,37 +6469,101 @@ D. Medan</pre>
             const opsiWrap = document.getElementById('kuisJalanOpsi');
             const huruf = ['A', 'B', 'C', 'D', 'E', 'F'];
             opsiWrap.innerHTML = soal.opsi.map((teks, i) => {
-                let dipilih = G_JawabanKuisAktif[soalIdx] === i;
-                let gambarOpsi = (soal.gambarOpsi && soal.gambarOpsi[i]) ? `<img src="${soal.gambarOpsi[i]}" class="w-full max-h-40 object-contain rounded-lg border border-gray-100 bg-white ${teks ? 'mt-2' : ''}">` : '';
-                return `<button type="button" onclick="pilihJawabanKuis(${i})" class="w-full text-left border rounded-xl p-3 transition ${dipilih ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200' : 'border-gray-200 bg-white hover:bg-gray-50'}">
+                const dipilih = G_JawabanKuisAktif[soalIdx] === i;
+                const gambarOpsi = (soal.gambarOpsi && soal.gambarOpsi[i]) ? `<img src="${soal.gambarOpsi[i]}" class="w-full max-h-44 object-contain rounded-lg border border-gray-100 bg-white ${teks ? 'mt-2.5' : ''}">` : '';
+                const kelasKartu = dipilih
+                    ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
+                    : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/40';
+                const kelasHuruf = dipilih ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500';
+                const teksHtml = teks ? `<span class="flex-1 min-w-0 break-words text-gray-700 leading-snug" style="font-size:${fs}">${rekapEsc(teks)}</span>` : '<span class="flex-1"></span>';
+                const centang = dipilih ? '<i class="fas fa-circle-check text-indigo-600 text-lg shrink-0"></i>' : '';
+                return `<button type="button" onclick="pilihJawabanKuis(${i})" class="w-full text-left rounded-2xl border-2 p-3.5 sm:p-4 transition-all duration-150 active:scale-[0.99] ${kelasKartu}">
                     <div class="flex items-center gap-3">
-                        <span class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${dipilih ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500'}">${huruf[i]}</span>
-                        ${teks ? `<span class="text-sm text-gray-700">${teks}</span>` : ''}
+                        <span class="w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-sm shrink-0 transition-colors ${kelasHuruf}">${huruf[i]}</span>
+                        ${teksHtml}
+                        ${centang}
                     </div>
                     ${gambarOpsi}
                 </button>`;
             }).join('');
 
+            // Navigator nomor soal
             const navWrap = document.getElementById('kuisJalanNavigator');
+            navWrap.className = 'relative gap-1.5 py-1.5 px-1 ' + (G_KuisNavExpanded ? 'flex flex-wrap' : 'flex overflow-x-auto kuis-nav-scroll');
             navWrap.innerHTML = G_KuisSoalUrut.map((sIdx, i) => {
-                let dijawab = G_JawabanKuisAktif[sIdx] !== null;
-                let aktif = i === G_KuisSoalIndex;
-                let cls = aktif ? 'bg-indigo-600 text-white' : (dijawab ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : 'bg-white text-gray-500 border border-gray-200');
-                return `<button type="button" onclick="lompatKeSoalKuis(${i})" class="w-8 h-8 rounded-lg text-xs font-bold transition ${cls}">${i + 1}</button>`;
+                const dijawab = adaJawab(G_JawabanKuisAktif[sIdx]);
+                const ragu = !!G_KuisRagu[sIdx];
+                const aktif = i === G_KuisSoalIndex;
+                let cls;
+                if (aktif) cls = 'bg-indigo-600 text-white border-indigo-600 shadow-md scale-110';
+                else if (ragu) cls = 'bg-amber-50 text-amber-700 border-amber-400';
+                else if (dijawab) cls = 'bg-emerald-50 text-emerald-700 border-emerald-300';
+                else cls = 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50';
+                const titik = ragu ? '<span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border border-white"></span>' : '';
+                return `<button type="button" data-nav="${i}" onclick="lompatKeSoalKuis(${i})" class="relative shrink-0 w-9 h-9 rounded-lg border text-xs font-bold transition ${cls}">${i + 1}${titik}</button>`;
             }).join('');
+            if (!G_KuisNavExpanded) {
+                const aktifBtn = navWrap.querySelector('[data-nav="' + G_KuisSoalIndex + '"]');
+                if (aktifBtn) navWrap.scrollLeft = aktifBtn.offsetLeft - (navWrap.clientWidth / 2) + (aktifBtn.offsetWidth / 2);
+            }
+            const btnNav = document.getElementById('btnKuisToggleNav');
+            if (btnNav) btnNav.innerText = G_KuisNavExpanded ? 'Ringkas' : 'Lihat semua';
 
+            // Tombol ragu-ragu
+            const btnRagu = document.getElementById('btnKuisRagu');
+            const raguAktif = !!G_KuisRagu[soalIdx];
+            btnRagu.className = 'inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border transition ' +
+                (raguAktif ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-white text-gray-500 border-gray-200 hover:bg-amber-50');
+            btnRagu.innerHTML = raguAktif ? '<i class="fas fa-flag"></i> Ditandai ragu-ragu' : '<i class="far fa-flag"></i> Ragu-ragu';
+
+            // Tombol bawah
+            const isFirst = G_KuisSoalIndex === 0;
             const isLast = G_KuisSoalIndex === total - 1;
+            const btnPrev = document.getElementById('btnKuisPrev');
+            btnPrev.disabled = isFirst;
+            btnPrev.classList.toggle('opacity-40', isFirst);
             document.getElementById('btnKuisNext').classList.toggle('hidden', isLast);
-            // Tombol "Selesai & Kumpulkan" selalu tampil di semua nomor soal,
+            // Tombol "Kumpulkan" selalu tampil di semua nomor soal,
             // sehingga siswa bisa mengumpulkan kapan saja walau waktu belum habis.
-            document.getElementById('btnKuisSelesai').classList.remove('hidden');
-            document.getElementById('btnKuisSelesai').classList.toggle('flex-1', isLast);
+            const btnSelesai = document.getElementById('btnKuisSelesai');
+            btnSelesai.classList.remove('hidden');
+            btnSelesai.classList.toggle('flex-1', isLast);
+            document.getElementById('btnKuisSelesaiLabel').innerText = isLast ? 'Selesai & Kumpulkan' : 'Kumpulkan';
+
+            // Animasi halus + kembali ke atas saat pindah soal
+            if (G_KuisRenderTerakhir !== G_KuisSoalIndex) {
+                const kartu = document.getElementById('kuisJalanKartu');
+                kartu.classList.remove('kuis-fade'); void kartu.offsetWidth; kartu.classList.add('kuis-fade');
+                const sc = document.getElementById('kuisJalanScroll');
+                if (sc) sc.scrollTop = 0;
+                G_KuisRenderTerakhir = G_KuisSoalIndex;
+            }
+
             simpanSesiKuis(); // autosave agar bisa dilanjutkan jika keluar
         }
 
         function pilihJawabanKuis(opsiIndex) {
             const soalIdx = G_KuisSoalUrut[G_KuisSoalIndex];
             G_JawabanKuisAktif[soalIdx] = opsiIndex;
+            renderSoalKuisAktif();
+        }
+
+        function toggleRaguKuis() {
+            const soalIdx = G_KuisSoalUrut[G_KuisSoalIndex];
+            G_KuisRagu[soalIdx] = !G_KuisRagu[soalIdx];
+            renderSoalKuisAktif();
+        }
+
+        function toggleNavigatorKuis() {
+            G_KuisNavExpanded = !G_KuisNavExpanded;
+            renderSoalKuisAktif();
+        }
+
+        function ubahUkuranTeksKuis(delta) {
+            const baru = Math.min(Math.max(G_KuisFontIdx + delta, 0), KUIS_FONT_SIZES.length - 1);
+            if (baru === G_KuisFontIdx) return;
+            G_KuisFontIdx = baru;
+            try { localStorage.setItem('kuis_font_idx', String(baru)); } catch (e) {}
             renderSoalKuisAktif();
         }
 
@@ -6444,6 +6578,24 @@ D. Medan</pre>
             G_KuisSoalIndex = i;
             renderSoalKuisAktif();
         }
+
+        // Pintasan keyboard: A-F memilih jawaban, panah kiri/kanan pindah soal
+        document.addEventListener('keydown', (e) => {
+            const view = document.getElementById('viewKuisPengerjaan');
+            if (!G_KuisAktif || !view || view.classList.contains('hidden')) return;
+            if (typeof Swal !== 'undefined' && Swal.isVisible()) return;
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            const tag = ((e.target && e.target.tagName) || '').toLowerCase();
+            if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+            if (e.key === 'ArrowRight') { navigasiSoalKuis(1); e.preventDefault(); return; }
+            if (e.key === 'ArrowLeft') { navigasiSoalKuis(-1); e.preventDefault(); return; }
+            const k = (e.key || '').toLowerCase();
+            if (k.length === 1 && k >= 'a' && k <= 'f') {
+                const soal = G_KuisAktif.soal[G_KuisSoalUrut[G_KuisSoalIndex]];
+                const i = k.charCodeAt(0) - 97;
+                if (soal && i < soal.opsi.length) pilihJawabanKuis(i);
+            }
+        });
 
         function selesaikanKuis(otomatis) {
             const prosesKumpul = () => {
@@ -6497,10 +6649,15 @@ D. Medan</pre>
             if (otomatis) {
                 prosesKumpul();
             } else {
-                let belumDijawab = G_JawabanKuisAktif.filter(j => j === null).length;
+                let belumDijawab = G_JawabanKuisAktif.filter(j => j === null || j === undefined).length;
+                let terjawab = G_JawabanKuisAktif.length - belumDijawab;
+                let raguJml = G_KuisRagu.filter(r => r).length;
                 Swal.fire({
                     title: 'Kumpulkan Jawaban?',
-                    text: belumDijawab > 0 ? `Masih ada ${belumDijawab} soal yang belum dijawab. Yakin ingin mengumpulkan sekarang?` : 'Jawaban tidak dapat diubah setelah dikumpulkan.',
+                    html: `<div class="text-sm text-gray-600 space-y-1.5">
+                        <p><b class="text-emerald-600">${terjawab}</b> soal terjawab, <b class="${belumDijawab > 0 ? 'text-red-500' : 'text-gray-700'}">${belumDijawab}</b> belum dijawab${raguJml > 0 ? `, <b class="text-amber-600">${raguJml}</b> ditandai ragu-ragu` : ''}.</p>
+                        <p class="text-xs text-gray-400">Jawaban tidak dapat diubah setelah dikumpulkan.</p>
+                    </div>`,
                     icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Kumpulkan', cancelButtonText: 'Periksa Lagi', confirmButtonColor: '#059669'
                 }).then(res => { if (res.isConfirmed) prosesKumpul(); });
             }
