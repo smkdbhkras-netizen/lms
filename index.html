@@ -899,7 +899,7 @@
          </div>
 
         <!-- ================= VIEW: KUIS ONLINE - PENGERJAAN (FULLSCREEN OVERLAY) ================= -->
-        <div id="viewKuisPengerjaan" class="hidden fixed inset-0 z-[9999] bg-gradient-to-b from-slate-50 via-white to-indigo-50/50 no-print">
+        <div id="viewKuisPengerjaan" class="hidden fixed inset-0 z-[9999] bg-slate-50 no-print" style="background-color:#f8fafc;">
             <style>
                 .kuis-fade { animation: kuisFade .28s ease; }
                 @keyframes kuisFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -910,7 +910,7 @@
             <div class="h-full flex flex-col">
 
                 <!-- Header: judul, progres, ukuran teks, timer -->
-                <header class="bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm shrink-0" style="padding-top: env(safe-area-inset-top, 0px);">
+                <header class="bg-white border-b border-gray-100 shadow-sm shrink-0" style="padding-top: env(safe-area-inset-top, 0px);">
                     <div class="max-w-3xl mx-auto px-3 sm:px-5 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
                         <div class="hidden sm:flex w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white items-center justify-center shrink-0 shadow-sm"><i class="fas fa-pen-to-square"></i></div>
                         <div class="min-w-0 flex-1">
@@ -964,7 +964,7 @@
                 </main>
 
                 <!-- Bar navigasi bawah (selalu terlihat) -->
-                <footer class="bg-white/95 backdrop-blur border-t border-gray-100 shrink-0 shadow-[0_-4px_16px_rgba(15,23,42,0.05)]" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+                <footer class="bg-white border-t border-gray-100 shrink-0 shadow-[0_-4px_16px_rgba(15,23,42,0.05)]" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
                     <div class="max-w-3xl mx-auto px-3 sm:px-5 py-3 flex gap-2">
                         <button type="button" id="btnKuisPrev" onclick="navigasiSoalKuis(-1)" class="bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold px-4 py-3 rounded-xl text-sm transition active:scale-95 whitespace-nowrap"><i class="fas fa-chevron-left"></i><span class="hidden sm:inline ml-1.5">Sebelumnya</span></button>
                         <button type="button" id="btnKuisNext" onclick="navigasiSoalKuis(1)" class="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold py-3 rounded-xl text-sm transition active:scale-95 shadow-md shadow-indigo-200 whitespace-nowrap">Soal Berikutnya <i class="fas fa-chevron-right ml-1"></i></button>
@@ -6578,6 +6578,19 @@ D. Medan</pre>
             G_KuisSoalIndex = i;
             renderSoalKuisAktif();
         }
+
+        // Saat ujian tampil: halaman di belakang dikunci agar fokus (tanpa scrollbar ganda); lepas otomatis saat ditutup
+        (function () {
+            const v = document.getElementById('viewKuisPengerjaan');
+            if (!v || typeof MutationObserver === 'undefined') return;
+            const sinkron = () => {
+                const buka = !v.classList.contains('hidden');
+                document.body.style.overflow = buka ? 'hidden' : '';
+                document.documentElement.style.overflow = buka ? 'hidden' : '';
+            };
+            new MutationObserver(sinkron).observe(v, { attributes: true, attributeFilter: ['class'] });
+            sinkron();
+        })();
 
         // Pintasan keyboard: A-F memilih jawaban, panah kiri/kanan pindah soal
         document.addEventListener('keydown', (e) => {
