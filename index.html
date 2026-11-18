@@ -98,6 +98,7 @@
     <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600&family=Noto+Sans+Javanese:wght@400;600&display=swap" rel="stylesheet">
     
     <!-- ===== BACKGROUND LOGIN LMS ===== -->
     <script>
@@ -126,6 +127,9 @@
            overlay fullscreen pengerjaan kuis (yang pakai z-[9999]), kalau tidak popup-nya
            akan tersembunyi di belakang layar kuis dan terlihat seperti "tidak ada respon". */
         .swal2-container { z-index: 100000 !important; }
+
+        /* Teks soal/opsi mendukung aksara lain (Arab, Jawa, dll). Font utama tetap sama, aksara lain memakai font cadangan. */
+        .kuis-uni { font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Naskh Arabic', 'Noto Sans Javanese', 'Noto Sans', sans-serif; }
         
         @media print {
             body * { visibility: hidden; }
@@ -641,6 +645,7 @@
                                     <div class="flex justify-between items-center mb-3">
                                         <label class="block text-xs font-bold text-gray-500 uppercase">Daftar Soal <span id="kuisSoalCount" class="text-amber-600">(0 soal)</span></label>
                                         <div class="flex items-center gap-2">
+                                            <button type="button" onclick="bukaPaletSimbol()" class="bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 font-bold px-3 py-1.5 rounded-lg text-xs transition active:scale-95"><i class="fas fa-square-root-variable mr-1"></i> Simbol &amp; Aksara</button>
                                             <button type="button" onclick="bukaModalImportSoal()" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 font-bold px-3 py-1.5 rounded-lg text-xs transition active:scale-95"><i class="fas fa-file-import mr-1"></i> Import Soal</button>
                                             <button type="button" onclick="tambahBarisSoalKuis()" class="bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 font-bold px-3 py-1.5 rounded-lg text-xs transition active:scale-95"><i class="fas fa-plus mr-1"></i> Tambah Soal</button>
                                         </div>
@@ -955,7 +960,7 @@
                                 <button type="button" id="btnKuisRagu" onclick="toggleRaguKuis()" class="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border transition bg-white text-gray-500 border-gray-200 hover:bg-amber-50"><i class="fas fa-flag"></i> Ragu-ragu</button>
                             </div>
                             <img id="kuisJalanGambarSoal" class="hidden w-full max-h-80 object-contain rounded-xl border border-gray-200 bg-white mb-4">
-                            <p id="kuisJalanPertanyaan" class="font-semibold text-gray-800 leading-relaxed whitespace-pre-line mb-5" style="font-size: 1rem; line-height: 1.7;"></p>
+                            <p id="kuisJalanPertanyaan" dir="auto" class="kuis-uni font-semibold text-gray-800 leading-relaxed whitespace-pre-line mb-5" style="font-size: 1rem; line-height: 1.7; text-align: start;"></p>
                             <div id="kuisJalanOpsi" class="space-y-3"></div>
                         </section>
 
@@ -5353,7 +5358,7 @@
                 <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5">
                     <input type="radio" name="kunci_${uid}" value="${i}" ${i === 0 ? 'checked' : ''} class="soalKunci w-4 h-4 text-emerald-600 focus:ring-emerald-500 shrink-0" title="Jadikan kunci jawaban">
                     <span class="text-xs font-bold text-gray-400 shrink-0">${huruf}.</span>
-                    <input type="text" class="soalOpsi w-full text-sm outline-none bg-transparent" placeholder="Opsi jawaban ${huruf}">
+                    <input type="text" dir="auto" class="soalOpsi kuis-uni w-full text-sm outline-none bg-transparent" placeholder="Opsi jawaban ${huruf}">
                     <button type="button" onclick="toggleGambarOpsi(this)" class="shrink-0 text-gray-300 hover:text-indigo-500 transition" title="Tambah/lihat gambar opsi ${huruf}"><i class="fas fa-image text-xs"></i></button>
                 </div>
                 <div class="opsiGambarBlok hidden mt-1 ml-1 flex items-center gap-1.5">
@@ -5383,8 +5388,8 @@
             div.className = 'border border-gray-200 rounded-xl p-3 sm:p-4 bg-slate-50/60 relative';
             div.innerHTML = `
                 <button type="button" onclick="hapusBarisSoalKuis('${uid}')" title="Hapus Soal" class="absolute top-2 right-2 text-red-400 hover:text-red-600 hover:bg-red-50 w-7 h-7 rounded-lg flex items-center justify-center transition"><i class="fas fa-trash-alt text-xs"></i></button>
-                <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Soal No. <span class="nomorSoalLabel">${nomor}</span></label>
-                <textarea class="soalPertanyaan w-full rounded-lg border border-gray-200 p-2.5 text-sm mb-2.5 focus:ring-2 focus:ring-amber-500 outline-none bg-white" rows="2" placeholder="Tulis pertanyaan di sini... (boleh dikosongkan kalau soal berupa gambar)"></textarea>
+                <div class="flex items-center gap-2 mb-1 pr-9"><label class="block text-xs font-bold text-gray-500 uppercase">Soal No. <span class="nomorSoalLabel">${nomor}</span></label><button type="button" onclick="bukaPaletSimbol(this)" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md px-2 py-1 transition active:scale-95" title="Simbol matematika, Yunani, Arab, Jawa, dan aksara lain"><i class="fas fa-square-root-variable mr-1"></i>Simbol &amp; Aksara</button></div>
+                <textarea dir="auto" class="soalPertanyaan kuis-uni w-full rounded-lg border border-gray-200 p-2.5 text-sm mb-2.5 focus:ring-2 focus:ring-amber-500 outline-none bg-white" rows="2" placeholder="Tulis pertanyaan di sini... (boleh dikosongkan kalau soal berupa gambar)"></textarea>
                 <div class="soalGambarBlok mb-2.5">
                     <div class="flex items-center gap-2">
                         <input type="text" class="soalGambarUrl flex-1 text-xs rounded-lg border border-gray-200 p-2 outline-none focus:ring-2 focus:ring-amber-500 bg-white" placeholder="Link gambar soal (opsional)" oninput="prosesInputUrlGambar(this)">
@@ -5429,6 +5434,218 @@
             }
             perbaruiNomorSoalKuis();
         }
+
+        // ================= GURU: PALET SIMBOL & AKSARA (MATEMATIKA, SAINS, BAHASA) =================
+        const KUIS_PALET = [{"id": "dasar", "label": "Dasar", "icon": "fa-calculator", "groups": [{"t": "Operasi", "c": ["+", "−", "×", "÷", "±", "∓", "⋅", "∗", "∘", "∙", "⁄", "/", "∣", "∤", "%", "‰", "‱"]}, {"t": "Relasi", "c": ["=", "≠", "≈", "≉", "≡", "≢", "≅", "≃", "∼", "∝", "<", ">", "≤", "≥", "≦", "≧", "≪", "≫", "≮", "≯", "≲", "≳", "⊥", "∥"]}, {"t": "Lainnya", "c": ["∞", "°", "′", "″", "‴", "∠", "∴", "∵", "…", "⋯", "⋮", "⋱", "(", ")", "[", "]", "{", "}", "⟨", "⟩", "‖", "¦"]}, {"t": "Pecahan", "c": ["½", "⅓", "⅔", "¼", "¾", "⅕", "⅖", "⅗", "⅘", "⅙", "⅚", "⅐", "⅛", "⅜", "⅝", "⅞", "⅑", "⅒"]}, {"t": "Mata uang", "c": ["Rp", "$", "€", "£", "¥", "¢", "₹", "₩", "₽", "₺", "₫", "฿", "₱", "₪"]}]}, {"id": "pangkat", "label": "Pangkat & Indeks", "icon": "fa-superscript", "groups": [{"t": "Pangkat (superscript)", "c": ["⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹", "⁺", "⁻", "⁼", "⁽", "⁾", "ⁿ", "ⁱ", "ˣ", "ʸ", "ᶻ", "ᵃ", "ᵇ", "ᶜ", "ᵈ", "ᵉ", "ᶠ", "ᵍ", "ʰ", "ʲ", "ᵏ", "ˡ", "ᵐ", "ᵒ", "ᵖ", "ʳ", "ˢ", "ᵗ", "ᵘ", "ᵛ", "ʷ"]}, {"t": "Indeks (subscript)", "c": ["₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈", "₉", "₊", "₋", "₌", "₍", "₎", "ₐ", "ₑ", "ₕ", "ᵢ", "ⱼ", "ₖ", "ₗ", "ₘ", "ₙ", "ₒ", "ₚ", "ᵣ", "ₛ", "ₜ", "ᵤ", "ᵥ", "ₓ"]}, {"t": "Contoh cepat", "c": ["x²", "x³", "xⁿ", "10⁻³", "aₙ", "x₁", "x₂", "xᵢ", "a²+b²", "√x²"]}]}, {"id": "kalkulus", "label": "Aljabar & Kalkulus", "icon": "fa-square-root-variable", "groups": [{"t": "Akar, jumlah, integral", "c": ["√", "∛", "∜", "∑", "∏", "∐", "∫", "∬", "∭", "∮", "∯", "∂", "∇", "∆", "′", "″", "⌊", "⌋", "⌈", "⌉", "‖", "∣", "⟨", "⟩", "⟦", "⟧"]}, {"t": "Panah & fungsi", "c": ["→", "←", "↔", "↦", "⇒", "⇐", "⇔", "⟹", "⟺", "⟶", "⟵", "↑", "↓"]}, {"t": "Bilangan", "c": ["ℕ", "ℤ", "ℚ", "ℝ", "ℂ", "ℙ", "ℍ", "ℵ", "∞", "π", "ℯ", "ⅈ"]}, {"t": "Tanda & lainnya", "c": ["±", "∓", "×", "÷", "⋅", "∘", "≈", "≠", "≤", "≥", "∝", "∴", "∵", "∠", "°", "!", "‰"]}]}, {"id": "himpunan", "label": "Himpunan & Logika", "icon": "fa-circle-nodes", "groups": [{"t": "Himpunan", "c": ["∈", "∉", "∋", "∌", "⊂", "⊃", "⊆", "⊇", "⊄", "⊅", "⊊", "⊋", "∪", "∩", "∅", "∖", "⊎", "⊔", "⊓", "⊖", "∆", "ℕ", "ℤ", "ℚ", "ℝ", "ℂ", "ℙ"]}, {"t": "Logika", "c": ["∀", "∃", "∄", "¬", "∧", "∨", "⊻", "⊼", "⊽", "→", "←", "↔", "⇒", "⇐", "⇔", "⊢", "⊨", "⊩", "⊤", "⊥", "∴", "∵", "∎", "⊕", "⊗", "⊙"]}]}, {"id": "geometri", "label": "Geometri", "icon": "fa-draw-polygon", "groups": [{"t": "Bangun & sudut", "c": ["∠", "∡", "∢", "⊾", "∟", "⊥", "∥", "∦", "△", "▲", "▽", "□", "■", "▭", "▱", "◇", "◆", "⬠", "⬡", "○", "●", "◯", "⌒", "⊿", "≅", "≃", "∼", "°", "′", "″", "⌀", "π", "θ", "φ"]}, {"t": "Garis atas, vektor, topi (letakkan setelah hurufnya)", "k": true, "c": ["̅", "̄", "⃗", "̂", "̃", "̇", "̈", "͡", "⃖"]}]}, {"id": "yunani", "label": "Yunani", "icon": "fa-font", "groups": [{"t": "Huruf kecil", "c": ["α", "β", "γ", "δ", "ε", "ζ", "η", "θ", "ι", "κ", "λ", "μ", "ν", "ξ", "ο", "π", "ρ", "σ", "ς", "τ", "υ", "φ", "χ", "ψ", "ω"]}, {"t": "Huruf kapital", "c": ["Α", "Β", "Γ", "Δ", "Ε", "Ζ", "Η", "Θ", "Ι", "Κ", "Λ", "Μ", "Ν", "Ξ", "Ο", "Π", "Ρ", "Σ", "Τ", "Υ", "Φ", "Χ", "Ψ", "Ω"]}, {"t": "Varian", "c": ["ϵ", "ϑ", "ϰ", "ϱ", "ϖ", "ϕ"]}]}, {"id": "sains", "label": "Fisika & Kimia", "icon": "fa-flask", "groups": [{"t": "Panah reaksi", "c": ["→", "←", "⇌", "⇄", "⇆", "⟶", "⟵", "⇋", "↑", "↓", "⟷", "↔"]}, {"t": "Satuan & besaran", "c": ["°", "°C", "°F", "℃", "℉", "Å", "µ", "Ω", "ℓ", "ħ", "ℏ", "‰", "∝", "⊙", "⊕", "∥", "⊥", "Δ", "λ", "ρ", "η"]}, {"t": "Muatan ion", "c": ["⁺", "⁻", "²⁺", "³⁺", "²⁻", "³⁻", "⁴⁻"]}, {"t": "Rumus kimia umum", "c": ["H₂O", "CO₂", "O₂", "H₂", "N₂", "NH₃", "CH₄", "HCl", "NaOH", "NaCl", "H₂SO₄", "CaCO₃", "C₆H₁₂O₆", "Fe₂O₃", "SO₄²⁻", "NO₃⁻", "OH⁻", "H⁺", "CH₃COOH", "C₂H₅OH"]}, {"t": "Satuan SI", "c": ["m/s", "m/s²", "kg·m/s²", "N·m", "J/s", "kWh", "µm", "nm", "mol/L", "g/mL", "kg/m³", "m·s⁻¹", "m·s⁻²", "N/m²", "W/m²"]}]}, {"id": "rumus", "label": "Rumus Cepat", "icon": "fa-bolt", "groups": [{"t": "Struktur (tanda ▯ = posisi kursor / teks yang diblok)", "c": ["√(|)", "∛(|)", "ⁿ√(|)", "(|)/( )", "∑ᵢ₌₁ⁿ |", "∫ₐᵇ | dx", "lim(x→∞) |", "log₂ |", "²log |", "∣|∣", "ⁿCᵣ", "ⁿPᵣ", "n!", "P(A∩B)", "P(A∪B)", "(a₁, a₂, a₃)", "x̄", "a⃗", "AB̅", "Δx", "dy/dx", "∂f/∂x"]}, {"t": "Rumus matematika", "c": ["a² + b² = c²", "(a + b)² = a² + 2ab + b²", "(a − b)² = a² − 2ab + b²", "a² − b² = (a + b)(a − b)", "x = (−b ± √(b² − 4ac)) / 2a", "Uₙ = a + (n − 1)b", "Sₙ = n/2 (a + Uₙ)", "Uₙ = a·rⁿ⁻¹", "L = π r²", "K = 2π r", "V = ⅓ π r² t", "sin² θ + cos² θ = 1", "tan θ = sin θ / cos θ"]}, {"t": "Rumus fisika & kimia", "c": ["F = m · a", "v = s / t", "E = m c²", "Ek = ½ m v²", "Ep = m g h", "P = F / A", "W = F · s", "V = I · R", "pH = −log[H⁺]", "M = n / V", "6CO₂ + 6H₂O → C₆H₁₂O₆ + 6O₂", "2H₂ + O₂ → 2H₂O"]}]}, {"id": "arab", "label": "Arab & Jawi", "icon": "fa-language", "rtl": true, "groups": [{"t": "Huruf Arab", "c": ["ا", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ذ", "ر", "ز", "س", "ش", "ص", "ض", "ط", "ظ", "ع", "غ", "ف", "ق", "ك", "ل", "م", "ن", "ه", "و", "ي"]}, {"t": "Hamzah & lainnya", "c": ["ء", "أ", "إ", "آ", "ؤ", "ئ", "ى", "ة", "ـ"]}, {"t": "Harakat (ketik huruf dulu, lalu pilih harakat)", "k": true, "c": ["َ", "ُ", "ِ", "ً", "ٌ", "ٍ", "ّ", "ْ", "ٓ", "ٰ"]}, {"t": "Angka & tanda baca", "c": ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩", "،", "؛", "؟", "۝", "۞", "ﷲ", "ﷺ", "ﷻ"]}, {"t": "Pegon / Jawi / Persia", "c": ["ڤ", "چ", "پ", "گ", "ژ", "ک", "ی", "ڠ", "ڽ", "ݢ", "ۏ"]}]}, {"id": "latin", "label": "Latin (Eropa)", "icon": "fa-globe-europe", "groups": [{"t": "Huruf kecil", "c": ["à", "á", "â", "ã", "ä", "å", "ā", "ă", "ą", "æ", "ç", "ć", "č", "ď", "đ", "è", "é", "ê", "ë", "ē", "ė", "ę", "ě", "ğ", "ì", "í", "î", "ï", "ī", "į", "ı", "ñ", "ń", "ň", "ò", "ó", "ô", "õ", "ö", "ō", "ő", "ø", "œ", "ŕ", "ř", "ś", "š", "ş", "ß", "ť", "ù", "ú", "û", "ü", "ū", "ů", "ű", "ų", "ý", "ÿ", "ź", "ż", "ž", "þ", "ð", "ł"]}, {"t": "Huruf kapital", "c": ["À", "Á", "Â", "Ã", "Ä", "Å", "Ā", "Ă", "Ą", "Æ", "Ç", "Ć", "Č", "Ď", "Đ", "È", "É", "Ê", "Ë", "Ē", "Ė", "Ę", "Ě", "Ğ", "Ì", "Í", "Î", "Ï", "Ī", "İ", "Ñ", "Ń", "Ň", "Ò", "Ó", "Ô", "Õ", "Ö", "Ō", "Ő", "Ø", "Œ", "Ř", "Ś", "Š", "Ş", "ẞ", "Ť", "Ù", "Ú", "Û", "Ü", "Ū", "Ů", "Ű", "Ý", "Ź", "Ż", "Ž", "Þ", "Ð", "Ł"]}, {"t": "Tanda baca", "c": ["¿", "¡", "«", "»", "“", "”", "‘", "’", "„", "‚", "‹", "›", "–", "—", "…"]}]}, {"id": "mandarin", "label": "Mandarin (Pinyin)", "icon": "fa-yin-yang", "groups": [{"t": "Nada pinyin", "c": ["ā", "á", "ǎ", "à", "ē", "é", "ě", "è", "ī", "í", "ǐ", "ì", "ō", "ó", "ǒ", "ò", "ū", "ú", "ǔ", "ù", "ǖ", "ǘ", "ǚ", "ǜ", "ü"]}, {"t": "Tanda baca Tionghoa", "c": ["。", "，", "、", "？", "！", "：", "；", "「", "」", "『", "』", "《", "》", "（", "）", "【", "】", "…", "～"]}, {"t": "Angka Hanzi", "c": ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "百", "千", "万"]}]}, {"id": "jepang", "label": "Jepang", "icon": "fa-torii-gate", "groups": [{"t": "Hiragana", "c": ["あ", "い", "う", "え", "お", "か", "き", "く", "け", "こ", "さ", "し", "す", "せ", "そ", "た", "ち", "つ", "て", "と", "な", "に", "ぬ", "ね", "の", "は", "ひ", "ふ", "へ", "ほ", "ま", "み", "む", "め", "も", "や", "ゆ", "よ", "ら", "り", "る", "れ", "ろ", "わ", "を", "ん"]}, {"t": "Hiragana kecil & tanda", "c": ["ぁ", "ぃ", "ぅ", "ぇ", "ぉ", "っ", "ゃ", "ゅ", "ょ", "゛", "゜", "ー", "、", "。", "「", "」", "・"]}, {"t": "Katakana", "c": ["ア", "イ", "ウ", "エ", "オ", "カ", "キ", "ク", "ケ", "コ", "サ", "シ", "ス", "セ", "ソ", "タ", "チ", "ツ", "テ", "ト", "ナ", "ニ", "ヌ", "ネ", "ノ", "ハ", "ヒ", "フ", "ヘ", "ホ", "マ", "ミ", "ム", "メ", "モ", "ヤ", "ユ", "ヨ", "ラ", "リ", "ル", "レ", "ロ", "ワ", "ヲ", "ン"]}, {"t": "Katakana kecil", "c": ["ァ", "ィ", "ゥ", "ェ", "ォ", "ッ", "ャ", "ュ", "ョ"]}]}, {"id": "korea", "label": "Korea", "icon": "fa-k", "groups": [{"t": "Konsonan", "c": ["ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"]}, {"t": "Vokal", "c": ["ㅏ", "ㅑ", "ㅓ", "ㅕ", "ㅗ", "ㅛ", "ㅜ", "ㅠ", "ㅡ", "ㅣ"]}, {"t": "Ganda", "c": ["ㄲ", "ㄸ", "ㅃ", "ㅆ", "ㅉ", "ㅐ", "ㅒ", "ㅔ", "ㅖ"]}]}, {"id": "kiril", "label": "Rusia (Kiril)", "icon": "fa-r", "groups": [{"t": "Huruf kecil", "c": ["а", "б", "в", "г", "д", "е", "ё", "ж", "з", "и", "й", "к", "л", "м", "н", "о", "п", "р", "с", "т", "у", "ф", "х", "ц", "ч", "ш", "щ", "ъ", "ы", "ь", "э", "ю", "я"]}, {"t": "Huruf kapital", "c": ["А", "Б", "В", "Г", "Д", "Е", "Ё", "Ж", "З", "И", "Й", "К", "Л", "М", "Н", "О", "П", "Р", "С", "Т", "У", "Ф", "Х", "Ц", "Ч", "Ш", "Щ", "Ъ", "Ы", "Ь", "Э", "Ю", "Я"]}]}, {"id": "jawa", "label": "Aksara Jawa", "icon": "fa-om", "groups": [{"t": "Aksara nglegena", "c": ["ꦲ", "ꦤ", "ꦕ", "ꦫ", "ꦏ", "ꦢ", "ꦠ", "ꦱ", "ꦮ", "ꦭ", "ꦥ", "ꦝ", "ꦗ", "ꦪ", "ꦚ", "ꦩ", "ꦒ", "ꦧ", "ꦛ", "ꦔ"]}, {"t": "Aksara swara", "c": ["ꦄ", "ꦆ", "ꦈ", "ꦌ", "ꦎ"]}, {"t": "Sandhangan (ketik aksara dulu, lalu pilih)", "k": true, "c": ["ꦶ", "ꦸ", "ꦺ", "ꦼ", "ꦴ", "ꦁ", "ꦃ", "ꦂ", "ꦀ"]}, {"t": "Pangkon (untuk pasangan: pangkon + aksara)", "c": ["꧀"]}, {"t": "Angka & tanda baca", "c": ["꧐", "꧑", "꧒", "꧓", "꧔", "꧕", "꧖", "꧗", "꧘", "꧙", "꧈", "꧉"]}]}, {"id": "umum", "label": "Simbol Umum", "icon": "fa-star", "groups": [{"t": "Panah", "c": ["←", "↑", "→", "↓", "↔", "↕", "↖", "↗", "↘", "↙", "⇐", "⇑", "⇒", "⇓", "⇔", "↩", "↪", "↺", "↻"]}, {"t": "Tanda", "c": ["✓", "✔", "✗", "✘", "★", "☆", "☐", "☑", "☒", "•", "◦", "▪", "▫", "◆", "◇", "⚠", "☀", "☁", "☂", "⚡", "❤"]}, {"t": "Musik & kartu", "c": ["♩", "♪", "♫", "♬", "♭", "♮", "♯", "♠", "♣", "♥", "♦"]}, {"t": "Teks", "c": ["©", "®", "™", "§", "¶", "†", "‡", "№", "°", "′", "″", "·", "•", "–", "—", "…"]}]}];
+        const KUIS_SUP = {"a": "ᵃ", "b": "ᵇ", "c": "ᶜ", "d": "ᵈ", "e": "ᵉ", "f": "ᶠ", "g": "ᵍ", "h": "ʰ", "i": "ⁱ", "j": "ʲ", "k": "ᵏ", "l": "ˡ", "m": "ᵐ", "n": "ⁿ", "o": "ᵒ", "p": "ᵖ", "r": "ʳ", "s": "ˢ", "t": "ᵗ", "u": "ᵘ", "v": "ᵛ", "w": "ʷ", "x": "ˣ", "y": "ʸ", "z": "ᶻ", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "+": "⁺", "-": "⁻", "=": "⁼", "(": "⁽", ")": "⁾", "−": "⁻"};
+        const KUIS_SUB = {"0": "₀", "1": "₁", "2": "₂", "3": "₃", "4": "₄", "5": "₅", "6": "₆", "7": "₇", "8": "₈", "9": "₉", "+": "₊", "-": "₋", "=": "₌", "(": "₍", ")": "₎", "a": "ₐ", "e": "ₑ", "h": "ₕ", "i": "ᵢ", "j": "ⱼ", "k": "ₖ", "l": "ₗ", "m": "ₘ", "n": "ₙ", "o": "ₒ", "p": "ₚ", "r": "ᵣ", "s": "ₛ", "t": "ₜ", "u": "ᵤ", "v": "ᵥ", "x": "ₓ", "−": "₋"};
+        let G_PaletTarget = null;   // kolom teks terakhir yang diklik guru (pertanyaan / opsi / judul)
+        let G_PaletTab = 'dasar';
+        let G_PaletMini = false;
+
+        function paletTerakhir() {
+            try { return JSON.parse(localStorage.getItem('kuis_palet_terakhir') || '[]'); } catch (e) { return []; }
+        }
+        function paletCatatTerakhir(teks) {
+            try {
+                let arr = paletTerakhir().filter(x => x !== teks);
+                arr.unshift(teks);
+                localStorage.setItem('kuis_palet_terakhir', JSON.stringify(arr.slice(0, 20)));
+            } catch (e) {}
+        }
+
+        function paletBuat() {
+            if (document.getElementById('paletSimbol')) return;
+            const el = document.createElement('div');
+            el.id = 'paletSimbol';
+            el.className = 'hidden fixed z-[10050] bottom-2 left-2 right-2 sm:left-auto sm:right-4 sm:bottom-4 sm:w-[470px] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden kuis-uni';
+            el.innerHTML = `
+                <div class="flex flex-col" style="max-height: 62vh;">
+                    <div class="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-3 py-2 flex items-center gap-2 shrink-0">
+                        <i class="fas fa-square-root-variable"></i>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-extrabold leading-tight">Simbol &amp; Aksara</div>
+                            <div id="paletTargetLabel" class="text-[10px] opacity-90 truncate">Klik kolom soal atau opsi dulu</div>
+                        </div>
+                        <button type="button" id="paletBtnMini" class="w-7 h-7 rounded-lg hover:bg-white/20 flex items-center justify-center" title="Kecilkan / besarkan"><i class="fas fa-chevron-down text-xs"></i></button>
+                        <button type="button" id="paletBtnTutup" class="w-7 h-7 rounded-lg hover:bg-white/20 flex items-center justify-center" title="Tutup"><i class="fas fa-times text-sm"></i></button>
+                    </div>
+                    <div id="paletIsi" class="flex flex-col min-h-0">
+                        <div id="paletTabs" class="flex gap-1 overflow-x-auto p-2 border-b border-gray-100 bg-gray-50 shrink-0"></div>
+                        <div class="flex flex-wrap items-center gap-1.5 px-2.5 py-2 border-b border-gray-100 shrink-0">
+                            <button type="button" data-konversi="sup" class="text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg px-2.5 py-1.5 hover:bg-indigo-100">x² Jadikan pangkat</button>
+                            <button type="button" data-konversi="sub" class="text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg px-2.5 py-1.5 hover:bg-indigo-100">x₂ Jadikan indeks</button>
+                            <button type="button" data-konversi="normal" class="text-[11px] font-bold bg-gray-50 text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-100">Normal</button>
+                            <span class="text-[10px] text-gray-400">(blok teksnya dulu)</span>
+                        </div>
+                        <div id="paletTerakhirWrap" class="px-2.5 pt-2 shrink-0 hidden"><div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Terakhir dipakai</div><div id="paletTerakhir" class="flex flex-wrap gap-1"></div></div>
+                        <div id="paletBody" class="overflow-y-auto p-2.5 space-y-3 min-h-0"></div>
+                        <p id="paletStatus" class="text-[11px] text-gray-400 px-3 py-1.5 border-t border-gray-100 shrink-0">Bahasa/aksara lain yang tidak ada di sini: pakai keyboard (IME) perangkat, kolom soal sudah mendukung semua aksara.</p>
+                    </div>
+                </div>`;
+            document.body.appendChild(el);
+            el.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); }); // jaga fokus & posisi kursor di kolom soal
+            el.querySelector('#paletBtnTutup').addEventListener('click', tutupPaletSimbol);
+            el.querySelector('#paletBtnMini').addEventListener('click', () => {
+                G_PaletMini = !G_PaletMini;
+                document.getElementById('paletIsi').classList.toggle('hidden', G_PaletMini);
+                el.querySelector('#paletBtnMini i').className = G_PaletMini ? 'fas fa-chevron-up text-xs' : 'fas fa-chevron-down text-xs';
+            });
+            el.querySelectorAll('[data-konversi]').forEach(b => b.addEventListener('click', () => paletKonversi(b.getAttribute('data-konversi'))));
+        }
+
+        function paletLabelTarget() {
+            const lbl = document.getElementById('paletTargetLabel');
+            const el = G_PaletTarget;
+            if (!lbl) return;
+            if (!el || !document.body.contains(el)) { lbl.innerText = 'Klik kolom soal atau opsi dulu'; return; }
+            if (el.id === 'kuis_judul') { lbl.innerText = 'Mengisi: Judul Kuis'; return; }
+            const blok = el.closest('#kuisSoalBuilder > div');
+            if (!blok) { lbl.innerText = 'Mengisi kolom terpilih'; return; }
+            const no = Array.prototype.indexOf.call(blok.parentElement.children, blok) + 1;
+            if (el.classList.contains('soalPertanyaan')) { lbl.innerText = 'Mengisi: Soal No. ' + no + ' (pertanyaan)'; return; }
+            const row = el.closest('.opsiRowWrap');
+            const idx = row ? Array.prototype.indexOf.call(row.parentElement.children, row) : 0;
+            lbl.innerText = 'Mengisi: Soal No. ' + no + ' (opsi ' + HURUF_OPSI_KUIS[idx] + ')';
+        }
+
+        function paletPesan(teks, merah) {
+            const el = document.getElementById('paletStatus');
+            if (!el) return;
+            el.innerText = teks;
+            el.className = 'text-[11px] px-3 py-1.5 border-t border-gray-100 shrink-0 ' + (merah ? 'text-red-500 font-semibold' : 'text-emerald-600 font-semibold');
+        }
+
+        function paletTombol(teks, kombinasi) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            const lebar = Array.from(teks).length > 2;
+            b.className = 'h-9 rounded-lg border border-gray-200 bg-white hover:bg-indigo-50 hover:border-indigo-300 active:scale-95 transition text-base text-gray-800 ' + (lebar ? 'px-2.5 text-sm' : 'min-w-[2.25rem] px-1.5');
+            b.textContent = kombinasi ? '\u25CC' + teks : teks.replace('|', '\u25AF');
+            b.title = teks.replace('|', '\u25AF');
+            b.addEventListener('click', () => paletSisipkan(teks));
+            return b;
+        }
+
+        function paletRenderTab() {
+            const tabs = document.getElementById('paletTabs');
+            const body = document.getElementById('paletBody');
+            if (!tabs || !body) return;
+            tabs.innerHTML = '';
+            KUIS_PALET.forEach(k => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                const aktif = k.id === G_PaletTab;
+                b.className = 'shrink-0 whitespace-nowrap text-[11px] font-bold px-2.5 py-1.5 rounded-lg border transition ' + (aktif ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-indigo-50');
+                b.innerHTML = `<i class="fas ${k.icon} mr-1"></i>${k.label}`;
+                b.addEventListener('click', () => { G_PaletTab = k.id; paletRenderTab(); });
+                tabs.appendChild(b);
+                if (aktif) setTimeout(() => { tabs.scrollLeft = b.offsetLeft - 40; }, 0);
+            });
+
+            const kat = KUIS_PALET.find(k => k.id === G_PaletTab) || KUIS_PALET[0];
+            body.innerHTML = '';
+            kat.groups.forEach(g => {
+                const wrap = document.createElement('div');
+                const judul = document.createElement('div');
+                judul.className = 'text-[10px] font-bold text-gray-400 uppercase mb-1';
+                judul.textContent = g.t;
+                const grid = document.createElement('div');
+                grid.className = 'flex flex-wrap gap-1';
+                if (kat.rtl) grid.setAttribute('dir', 'rtl');
+                g.c.forEach(ch => grid.appendChild(paletTombol(ch, g.k)));
+                wrap.appendChild(judul); wrap.appendChild(grid);
+                body.appendChild(wrap);
+            });
+
+            const trk = paletTerakhir();
+            const wrapT = document.getElementById('paletTerakhirWrap');
+            const boxT = document.getElementById('paletTerakhir');
+            boxT.innerHTML = '';
+            trk.forEach(ch => boxT.appendChild(paletTombol(ch, false)));
+            wrapT.classList.toggle('hidden', trk.length === 0);
+        }
+
+        function bukaPaletSimbol(btn) {
+            paletBuat();
+            if (btn) {
+                const blok = btn.closest('#kuisSoalBuilder > div');
+                if (blok && (!G_PaletTarget || !blok.contains(G_PaletTarget))) G_PaletTarget = blok.querySelector('.soalPertanyaan');
+            }
+            if (!G_PaletTarget || !document.body.contains(G_PaletTarget)) {
+                G_PaletTarget = document.querySelector('#kuisSoalBuilder .soalPertanyaan') || document.getElementById('kuis_judul');
+            }
+            G_PaletMini = false;
+            document.getElementById('paletIsi').classList.remove('hidden');
+            document.querySelector('#paletBtnMini i').className = 'fas fa-chevron-down text-xs';
+            document.getElementById('paletSimbol').classList.remove('hidden');
+            paletRenderTab();
+            paletLabelTarget();
+            if (G_PaletTarget && btn) { try { G_PaletTarget.focus({ preventScroll: true }); } catch (e) {} }
+        }
+
+        function tutupPaletSimbol() {
+            const el = document.getElementById('paletSimbol');
+            if (el) el.classList.add('hidden');
+        }
+
+        function paletSisipkan(teks) {
+            const el = G_PaletTarget;
+            if (!el || !document.body.contains(el)) {
+                return paletPesan('Klik dulu kolom soal atau opsi yang ingin diisi.', true);
+            }
+            const penanda = teks.indexOf('|');
+            const mulai = (typeof el.selectionStart === 'number') ? el.selectionStart : el.value.length;
+            const akhir = (typeof el.selectionEnd === 'number') ? el.selectionEnd : mulai;
+            const terpilih = el.value.slice(mulai, akhir);
+            let sisip, posisi;
+            if (penanda !== -1) {
+                const depan = teks.slice(0, penanda), belakang = teks.slice(penanda + 1);
+                sisip = depan + terpilih + belakang;
+                posisi = mulai + depan.length + terpilih.length;
+            } else {
+                sisip = teks;
+                posisi = mulai + teks.length;
+            }
+            el.setRangeText(sisip, mulai, akhir, 'end');
+            el.setSelectionRange(posisi, posisi);
+            el.focus();
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            paletCatatTerakhir(teks);
+            paletPesan('Disisipkan: ' + teks.replace('|', '\u25AF'), false);
+        }
+
+        function paletKonversi(mode) {
+            const el = G_PaletTarget;
+            if (!el || !document.body.contains(el)) return paletPesan('Klik dulu kolom soal atau opsi yang ingin diisi.', true);
+            const mulai = el.selectionStart, akhir = el.selectionEnd;
+            if (typeof mulai !== 'number' || mulai === akhir) return paletPesan('Blok (seleksi) dulu teks yang ingin diubah, misalnya angka 2 pada x2.', true);
+            const asal = el.value.slice(mulai, akhir);
+            let hasil;
+            if (mode === 'normal') {
+                const balik = {};
+                Object.keys(KUIS_SUP).forEach(k => { if (k !== '\u2212') balik[KUIS_SUP[k]] = k; });
+                Object.keys(KUIS_SUB).forEach(k => { if (k !== '\u2212') balik[KUIS_SUB[k]] = k; });
+                hasil = Array.from(asal).map(c => balik[c] !== undefined ? balik[c] : c).join('');
+            } else {
+                const peta = mode === 'sup' ? KUIS_SUP : KUIS_SUB;
+                hasil = Array.from(asal).map(c => peta[c] !== undefined ? peta[c] : c).join('');
+            }
+            el.setRangeText(hasil, mulai, akhir, 'select');
+            el.focus();
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            paletPesan('Teks terpilih diubah.', false);
+        }
+
+        // Ingat kolom teks terakhir yang diklik di form kuis (kecuali kolom link gambar)
+        document.addEventListener('focusin', (e) => {
+            const el = e.target;
+            if (!el || !el.closest || !el.closest('#formKuis')) return;
+            if (!el.matches('textarea, input[type="text"]')) return;
+            if (el.matches('.soalGambarUrl, .opsiGambarUrl, #kuis_sandi')) return;
+            G_PaletTarget = el;
+            paletLabelTarget();
+        });
 
         // ================= GURU: GAMBAR SOAL & GAMBAR OPSI =================
         function prosesInputUrlGambar(input) {
@@ -6475,7 +6692,7 @@ D. Medan</pre>
                     ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
                     : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/40';
                 const kelasHuruf = dipilih ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500';
-                const teksHtml = teks ? `<span class="flex-1 min-w-0 break-words text-gray-700 leading-snug" style="font-size:${fs}">${rekapEsc(teks)}</span>` : '<span class="flex-1"></span>';
+                const teksHtml = teks ? `<span dir="auto" class="kuis-uni flex-1 min-w-0 break-words text-gray-700 leading-relaxed" style="font-size:${fs};text-align:start">${rekapEsc(teks)}</span>` : '<span class="flex-1"></span>';
                 const centang = dipilih ? '<i class="fas fa-circle-check text-indigo-600 text-lg shrink-0"></i>' : '';
                 return `<button type="button" onclick="pilihJawabanKuis(${i})" class="w-full text-left rounded-2xl border-2 p-3.5 sm:p-4 transition-all duration-150 active:scale-[0.99] ${kelasKartu}">
                     <div class="flex items-center gap-3">
