@@ -927,6 +927,7 @@
                             <button type="button" onclick="ubahUkuranTeksKuis(-1)" class="px-2 py-1.5 text-[11px] font-bold text-gray-500 hover:bg-gray-100 active:bg-gray-200">A-</button>
                             <button type="button" onclick="ubahUkuranTeksKuis(1)" class="px-2 py-1.5 text-sm font-bold text-gray-600 hover:bg-gray-100 active:bg-gray-200 border-l border-gray-200">A+</button>
                         </div>
+                        <button type="button" id="btnKuisKeluar" onclick="keluarKuis()" class="shrink-0 bg-white border border-red-200 text-red-600 hover:bg-red-50 active:bg-red-100 font-bold px-2.5 py-2 rounded-lg text-[11px] sm:text-xs" title="Keluar dari ujian (butuh kode guru)"><i class="fas fa-right-from-bracket mr-1"></i>Keluar</button>
                         <div id="kuisJalanTimerBox" class="shrink-0 rounded-xl px-3 py-1.5 text-center border bg-indigo-50 border-indigo-100 text-indigo-700">
                             <div class="text-[9px] font-bold uppercase tracking-wide opacity-70"><i class="fas fa-stopwatch mr-0.5"></i>Sisa Waktu</div>
                             <div id="kuisJalanTimer" class="font-mono font-extrabold text-base sm:text-lg leading-none mt-0.5">00:00</div>
@@ -6689,6 +6690,50 @@ D. Medan</pre>
                 if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
             }
         }).observe(document.getElementById('viewKuisPengerjaan'), { attributes: true, attributeFilter: ['class'] });
+
+        // ---- Esc ditahan (Chrome/Edge/Android Chrome): Esc singkat tidak bisa keluar layar penuh ----
+        function kunciEsc() { try { if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock(['Escape']).catch(() => {}); } catch (e) {} }
+        function bukaKunciEsc() { try { if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock(); } catch (e) {} }
+        ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => {
+            if (document.fullscreenElement || document.webkitFullscreenElement) { if (pengawasAktif()) kunciEsc(); } else bukaKunciEsc();
+        }));
+
+        // ---- Tombol KELUAR: satu-satunya jalan keluar selain Kumpulkan, wajib kode guru ----
+        function keluarKuis() {
+            if (!G_KuisAktif) return;
+            const perluKode = !!G_KuisKode;
+            Swal.fire({
+                title: 'Keluar dari Ujian?',
+                html: '<div class="text-sm text-gray-600 space-y-1.5"><p>Jawabanmu tersimpan, tapi <b>waktu ujian tetap berjalan</b>.</p>' + (perluKode ? '<p class="text-xs text-amber-600 font-bold"><i class="fas fa-key mr-1"></i> Masukkan kode keluar dari guru.</p>' : '') + '</div>',
+                icon: 'warning', showCancelButton: true, confirmButtonText: 'Keluar', cancelButtonText: 'Kembali ke Ujian', confirmButtonColor: '#dc2626',
+                input: perluKode ? 'password' : undefined,
+                inputPlaceholder: perluKode ? 'Kode dari guru' : undefined,
+                inputAttributes: { autocapitalize: 'off', autocorrect: 'off', autocomplete: 'off' },
+                preConfirm: (value) => {
+                    if (perluKode && (value || '').toString().trim() !== G_KuisKode.toString().trim()) {
+                        Swal.showValidationMessage('Kode salah. Minta kode keluar ke guru.');
+                        return false;
+                    }
+                    return true;
+                }
+            }).then(res => {
+                if (!res.isConfirmed) return;
+                if (G_KuisTimerInterval) clearInterval(G_KuisTimerInterval);
+                G_KuisTimerInterval = null;
+                G_KuisTerkunci = false;
+                simpanSesiKuis();
+                G_KuisKode = ''; // pengawas mati dulu agar keluar layar penuh tidak dianggap pelanggaran
+                document.getElementById('kuisKunciOverlay').classList.add('hidden');
+                document.getElementById('kuisFsOverlay').classList.add('hidden');
+                bukaKunciEsc();
+                document.getElementById('viewKuisPengerjaan').classList.add('hidden');
+                if ((document.fullscreenElement || document.webkitFullscreenElement)) {
+                    const ex = document.exitFullscreen || document.webkitExitFullscreen;
+                    try { const p = ex.call(document); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+                }
+                try { if (typeof renderKuisSiswaList === 'function') renderKuisSiswaList(); } catch (e) {}
+            });
+        }
 
         function jalankanSesiKuis(kuisRow, soal, urutan, jawaban, index, waktuMulai, durasiTotal, ragu) {
             G_KuisAktif = { id: kuisRow[1], judul: kuisRow[2], soal: soal, kkm: kuisRow[6], tampilkanKunci: (kuisRow[7] === 'YA'), durasiMenit: kuisRow[5] };
