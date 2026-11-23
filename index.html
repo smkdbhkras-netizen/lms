@@ -2239,9 +2239,15 @@
                 r.querySelectorAll('.akunTkCb').forEach(x => { x.checked = !!(km[cb.value] && km[cb.value].includes(x.dataset.t)); });
             });
         }
-        function milikGuruLogin(pembuat) {
-            // Guru hanya melihat tugas/kuis buatannya sendiri; admin melihat semuanya.
-            return !(G_CurrentUser && G_CurrentUser.role === 'guru') || String(pembuat || '') === String(G_CurrentUser.nama || '');
+        function milikGuruLogin(pembuat, mapel, kelas) {
+            // Admin melihat semuanya. Guru hanya melihat tugas/kuis yang SESUAI mapel dan kelas di akunnya.
+            if (!(G_CurrentUser && G_CurrentUser.role === 'guru')) return true;
+            if (mapel === undefined) return String(pembuat || '') === String(G_CurrentUser.nama || '');
+            if (!mapelGuruLogin().includes(String(mapel || '').trim())) return false;
+            const t = parseKelasMapel(G_CurrentUser.kelasMapel)[String(mapel).trim()];
+            if (!t) return true; // kelas tidak dibatasi untuk mapel ini
+            const k = String(kelas || '');
+            return t.some(x => x === 'Jauh' ? /^Kelas Jauh/.test(k) : new RegExp('(^|\\D)' + (TINGKAT_ANGKA[x] || '#') + '(\\D|$)').test(k));
         }
 
         function setupRoleUI() {
@@ -2485,7 +2491,7 @@
             const divTugas = document.getElementById('listTugasAdmin');
             divTugas.innerHTML = '';
             G_Tugas.forEach((t, idx) => {
-                if (!milikGuruLogin(t[5])) return;
+                if (!milikGuruLogin(t[5], t[9], t[7])) return;
                 let d = showSheetDate(t[4]);
                 let lampiranHtml = t[6] ? `<a href="${t[6]}" target="_blank" class="text-xs font-bold text-blue-600 hover:text-blue-800 mt-2 inline-flex items-center bg-blue-50 px-2 py-1 rounded"><i class="fas fa-paperclip mr-1"></i> Lampiran</a>` : '';
                 let linkHtml = t[8] ? `<a href="${t[8]}" target="_blank" class="text-xs font-bold text-purple-600 hover:text-purple-800 mt-2 ml-2 inline-flex items-center bg-purple-50 px-2 py-1 rounded"><i class="fas fa-link mr-1"></i> Link</a>` : '';
@@ -6394,7 +6400,7 @@ D. Medan</pre>
             if (!wrap) return;
             if (!dariCari) muatKodeKuisGuru();
             const badge = document.getElementById('kuisJumlahBadge');
-            if (badge) badge.innerText = G_Kuis.filter(k => milikGuruLogin(k[9])).length;
+            if (badge) badge.innerText = G_Kuis.filter(k => milikGuruLogin(k[9], k[4], k[3])).length;
             wrap.innerHTML = '';
             if (G_Kuis.length === 0) {
                 wrap.innerHTML = `<div class="md:col-span-2 xl:col-span-2 p-8 text-center text-gray-500 border border-dashed border-gray-300 rounded-2xl bg-white"><p class="font-bold text-sm">Belum ada kuis yang diterbitkan.</p><p class="text-xs mt-1">Klik "Buat Kuis Baru" di atas untuk memulai.</p></div>`;
@@ -6404,7 +6410,7 @@ D. Medan</pre>
             const q = ((cariEl && cariEl.value) || '').toString().trim().toLowerCase();
             let tampil = 0;
             G_Kuis.forEach((k, idx) => {
-                if (!milikGuruLogin(k[9])) return;
+                if (!milikGuruLogin(k[9], k[4], k[3])) return;
                 if (q && ![k[2], k[3], k[4]].some(v => String(v || '').toLowerCase().includes(q))) return;
                 tampil++;
                 let soalCount = 0;
