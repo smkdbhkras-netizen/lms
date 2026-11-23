@@ -628,26 +628,27 @@
                     <!-- TAB: KUIS ONLINE (E-LEARNING) -->
                     <div id="dashKuis" class="admin-tab hidden space-y-4 sm:space-y-5 h-full flex-col">
 
-                        <!-- Judul halaman + tombol buat kuis -->
-                        <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
-                            <div>
-                                <h2 class="text-lg sm:text-xl font-extrabold text-gray-800"><i class="fas fa-file-circle-question text-amber-500 mr-2"></i>Kuis Online</h2>
-                                <p class="text-xs text-gray-500 mt-0.5">Buat kuis, lihat kode ujian, dan buka rekap nilai siswa.</p>
+                        <!-- Judul + tab Pantau / Buat -->
+                        <div class="shrink-0">
+                            <h2 class="text-lg sm:text-xl font-extrabold text-gray-800"><i class="fas fa-file-circle-question text-amber-500 mr-2"></i>Kuis Online</h2>
+                            <p class="text-xs text-gray-500 mt-0.5">Pantau kuis yang berjalan, atau buat kuis baru dalam 3 langkah singkat.</p>
+                            <div class="mt-3 grid grid-cols-2 sm:inline-grid sm:grid-cols-[auto_auto] gap-1 bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
+                                <button type="button" id="tabKuisPantau" onclick="tutupFormKuis()" class="px-5 py-2 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 bg-white text-amber-700 shadow-sm"><i class="fas fa-chart-line"></i> Pantau Kuis <span id="kuisJumlahBadge" class="text-[11px] bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">0</span></button>
+                                <button type="button" id="tabKuisBuat" onclick="bukaFormKuis()" class="px-5 py-2 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 text-gray-500 hover:text-amber-700"><i class="fas fa-plus"></i> <span id="btnToggleFormKuisLabel">Buat Kuis</span></button>
                             </div>
-                            <button type="button" id="btnToggleFormKuis" onclick="toggleFormKuis()" class="bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-sm flex items-center gap-2"><i class="fas fa-plus"></i> <span id="btnToggleFormKuisLabel">Buat Kuis Baru</span></button>
                         </div>
 
-                        <!-- Kode ujian (ringkas) -->
-                        <div id="kodeKuisPanel" class="bg-amber-50 border border-amber-200 rounded-xl p-3 sm:p-4 shrink-0">
-                            <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 mb-2">
-                                <h3 class="font-bold text-sm text-amber-800"><i class="fas fa-key mr-1"></i> Kode Ujian Saya</h3>
-                                <span class="text-[11px] text-amber-700">Berganti otomatis tiap 30 menit &bull; berikan ke siswa yang meminta kode masuk/keluar.</span>
-                            </div>
-                            <div id="kodeKuisIsi" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5"><p class="text-xs text-amber-700">Memuat kode...</p></div>
+                        <!-- Panel kode lama: disembunyikan, kode kini tampil di tiap kartu kuis -->
+                        <div id="kodeKuisPanel" class="hidden"><div id="kodeKuisIsi"></div></div>
+
+                        <!-- ====== TAB 1: PANTAU KUIS ====== -->
+                        <div id="kuisPanePantau" class="flex-1 flex flex-col min-h-[300px]">
+                            <div class="relative w-full sm:w-80 mb-3 shrink-0"><i class="fas fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i><input type="text" id="kuisCari" oninput="renderKuisAdminList(true)" placeholder="Cari judul / mapel / kelas..." class="w-full rounded-lg border border-gray-200 pl-8 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none bg-white"></div>
+                            <div class="flex-1 overflow-y-auto"><div id="listKuisAdmin" class="grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 items-start"></div></div>
                         </div>
 
-                        <!-- Form buat / edit kuis (tersembunyi, dibuka lewat tombol) -->
-                        <div id="kuisFormCard" class="hidden bg-white rounded-xl shadow-sm border border-amber-200 p-4 sm:p-5 shrink-0 relative">
+                        <!-- ====== TAB 2: BUAT / EDIT KUIS ====== -->
+                        <div id="kuisFormCard" class="hidden bg-white rounded-xl shadow-sm border border-amber-200 p-4 sm:p-5 relative">
                             <div id="floatCancelEditKuis" class="hidden absolute top-3 right-3 z-10"><button type="button" onclick="resetFormKuis()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm text-xs transition active:scale-95 flex items-center gap-1"><i class="fas fa-times"></i> Batal Edit</button></div>
                             <h3 id="kuisFormJudul" class="font-bold text-base sm:text-lg mb-4 text-gray-800 border-b pb-2"><i class="fas fa-file-circle-question text-amber-500 mr-2"></i> Buat Kuis Online (Pilihan Ganda)</h3>
                             <form id="formKuis" onsubmit="submitFormKuis(event)" class="space-y-5">
@@ -655,9 +656,9 @@
 
                                 <!-- 1. Informasi -->
                                 <section>
-                                    <p class="text-[11px] font-extrabold text-amber-700 uppercase tracking-wide mb-2"><span class="inline-flex w-5 h-5 rounded-full bg-amber-100 text-amber-700 items-center justify-center mr-1">1</span> Informasi Kuis</p>
+                                    <p class="text-[11px] font-extrabold text-amber-700 uppercase tracking-wide mb-2"><span class="inline-flex w-5 h-5 rounded-full bg-amber-100 text-amber-700 items-center justify-center mr-1">1</span> Info Kuis</p>
                                     <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                        <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-500 mb-1">Judul Kuis</label><input type="text" id="kuis_judul" required class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"></div>
+                                        <div class="md:col-span-2"><label class="block text-xs font-bold text-gray-500 mb-1">Judul Kuis</label><input type="text" id="kuis_judul" required placeholder="cth: Kuis Bab 3 - Fotosintesis" class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"></div>
                                         <div><label class="block text-xs font-bold text-gray-500 mb-1">Mata Pelajaran</label><select id="kuis_mapel" required class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none bg-white"></select></div>
                                         <div><label class="block text-xs font-bold text-gray-500 mb-1">Target Kelas</label><select id="kuis_kelas" required class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none bg-white"></select></div>
                                     </div>
@@ -666,15 +667,23 @@
                                 <!-- 2. Pengaturan -->
                                 <section>
                                     <p class="text-[11px] font-extrabold text-amber-700 uppercase tracking-wide mb-2"><span class="inline-flex w-5 h-5 rounded-full bg-amber-100 text-amber-700 items-center justify-center mr-1">2</span> Pengaturan</p>
+                                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                                        <span class="text-xs font-bold text-gray-500">Pilih cepat:</span>
+                                        <button type="button" onclick="terapkanPresetKuis('ujian')" class="bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 font-bold px-3 py-1.5 rounded-lg text-xs transition active:scale-95"><i class="fas fa-lock mr-1"></i> Ujian</button>
+                                        <button type="button" onclick="terapkanPresetKuis('latihan')" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 font-bold px-3 py-1.5 rounded-lg text-xs transition active:scale-95"><i class="fas fa-lightbulb mr-1"></i> Latihan</button>
+                                    </div>
                                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                                         <div><label class="block text-xs font-bold text-gray-500 mb-1">Durasi (menit)</label><input type="number" id="kuis_durasi" min="1" value="10" required class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"></div>
                                         <div><label class="block text-xs font-bold text-gray-500 mb-1">KKM <span class="font-normal text-gray-400">(opsional)</span></label><input type="number" id="kuis_kkm" min="0" max="100" placeholder="cth: 75" class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"></div>
                                     </div>
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                                        <label class="flex items-start gap-2.5 border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-amber-50/50 transition"><input type="checkbox" id="kuis_kunci_ujian" checked class="w-4 h-4 mt-0.5 rounded text-amber-600 focus:ring-amber-500"><span class="text-sm font-bold text-gray-700">Mode Ujian Terkunci<span class="block text-[11px] font-normal text-gray-400 leading-snug">Layar penuh + kode guru untuk keluar. Kode dibuat otomatis, lihat di panel Kode Ujian.</span></span></label>
-                                        <label class="flex items-start gap-2.5 border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-amber-50/50 transition"><input type="checkbox" id="kuis_kunci" class="w-4 h-4 mt-0.5 rounded text-amber-600 focus:ring-amber-500"><span class="text-sm font-bold text-gray-700">Tampilkan kunci<span class="block text-[11px] font-normal text-gray-400 leading-snug">Siswa melihat kunci jawaban setelah selesai.</span></span></label>
-                                        <label class="flex items-start gap-2.5 border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-amber-50/50 transition"><input type="checkbox" id="kuis_acak" checked class="w-4 h-4 mt-0.5 rounded text-amber-600 focus:ring-amber-500"><span class="text-sm font-bold text-gray-700">Acak urutan soal<span class="block text-[11px] font-normal text-gray-400 leading-snug">Urutan soal berbeda untuk tiap siswa.</span></span></label>
-                                    </div>
+                                    <details id="kuisLanjutan" class="border border-gray-200 rounded-xl group" oninput="ringkasPengaturanKuis()" onchange="ringkasPengaturanKuis()">
+                                        <summary class="cursor-pointer select-none px-3 py-2.5 text-sm font-bold text-gray-700 flex items-center justify-between gap-2"><span><i class="fas fa-sliders mr-1.5 text-gray-400"></i> Pengaturan lanjutan</span><span id="kuisRingkasan" class="text-[11px] font-semibold text-gray-400 text-right"></span></summary>
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 p-3 pt-1">
+                                            <label class="flex items-start gap-2.5 border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-amber-50/50 transition"><input type="checkbox" id="kuis_kunci_ujian" checked class="w-4 h-4 mt-0.5 rounded text-amber-600 focus:ring-amber-500"><span class="text-sm font-bold text-gray-700">Mode Ujian Terkunci<span class="block text-[11px] font-normal text-gray-400 leading-snug">Layar penuh + kode guru untuk keluar. Kode tampil di kartu kuis.</span></span></label>
+                                            <label class="flex items-start gap-2.5 border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-amber-50/50 transition"><input type="checkbox" id="kuis_kunci" class="w-4 h-4 mt-0.5 rounded text-amber-600 focus:ring-amber-500"><span class="text-sm font-bold text-gray-700">Tampilkan kunci<span class="block text-[11px] font-normal text-gray-400 leading-snug">Siswa melihat kunci jawaban setelah selesai.</span></span></label>
+                                            <label class="flex items-start gap-2.5 border border-gray-200 rounded-xl p-3 cursor-pointer hover:bg-amber-50/50 transition"><input type="checkbox" id="kuis_acak" checked class="w-4 h-4 mt-0.5 rounded text-amber-600 focus:ring-amber-500"><span class="text-sm font-bold text-gray-700">Acak urutan soal<span class="block text-[11px] font-normal text-gray-400 leading-snug">Urutan soal berbeda untuk tiap siswa.</span></span></label>
+                                        </div>
+                                    </details>
                                 </section>
 
                                 <!-- 3. Soal -->
@@ -689,23 +698,16 @@
                                     </div>
                                     <input type="file" id="inputImportSoalExcel" accept=".xlsx,.xls" class="hidden" onchange="prosesImportSoalExcel(event)">
                                     <input type="file" id="inputImportSoalWord" accept=".docx,.txt" class="hidden" onchange="prosesImportSoalWord(event)">
-                                    <div id="kuisSoalBuilder" class="space-y-3"></div>
+                                    <div id="kuisSoalBuilder" class="space-y-3" oninput="perbaruiStatusBarKuis()" onchange="perbaruiStatusBarKuis()"></div>
                                 </section>
 
-                                <div class="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-100">
-                                    <button type="submit" id="btnKuis" class="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition shadow-sm"><i class="fas fa-paper-plane mr-1"></i> Terbitkan Kuis</button>
-                                    <button type="button" onclick="resetFormKuis()" class="w-full sm:w-auto bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold px-5 py-2.5 rounded-lg text-sm transition">Tutup</button>
+                                <!-- Bilah bawah (menempel) -->
+                                <div class="sticky bottom-0 -mx-4 sm:-mx-5 -mb-4 sm:-mb-5 px-4 sm:px-5 py-3 bg-white/95 backdrop-blur border-t border-gray-200 rounded-b-xl flex flex-wrap items-center gap-3 z-10">
+                                    <div id="kuisStatusBar" class="text-xs font-bold text-gray-500 flex-1 min-w-[140px]">0 soal</div>
+                                    <button type="button" onclick="resetFormKuis()" class="bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold px-4 py-2.5 rounded-lg text-sm transition">Batal</button>
+                                    <button type="submit" id="btnKuis" class="bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition shadow-sm"><i class="fas fa-paper-plane mr-1"></i> Terbitkan Kuis</button>
                                 </div>
                             </form>
-                        </div>
-
-                        <!-- Daftar kuis -->
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden min-h-[300px]">
-                            <div class="p-3 sm:p-4 border-b bg-gray-50 shrink-0 flex flex-wrap items-center justify-between gap-2">
-                                <h3 class="font-bold text-gray-700 text-sm sm:text-base">Daftar Kuis Diterbitkan <span id="kuisJumlahBadge" class="ml-1 text-[11px] bg-amber-100 text-amber-700 rounded-full px-2 py-0.5 align-middle">0</span></h3>
-                                <div class="relative w-full sm:w-64"><i class="fas fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i><input type="text" id="kuisCari" oninput="renderKuisAdminList(true)" placeholder="Cari judul / mapel / kelas..." class="w-full rounded-lg border border-gray-200 pl-8 pr-3 py-2 text-xs focus:ring-2 focus:ring-amber-500 outline-none bg-white"></div>
-                            </div>
-                            <div class="overflow-y-auto flex-1 p-3 sm:p-4"><div id="listKuisAdmin" class="grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 items-start"></div></div>
                         </div>
                     </div>
 
@@ -5970,6 +5972,7 @@
             const labels = wrap.querySelectorAll('.nomorSoalLabel');
             labels.forEach((el, i) => { el.innerText = i + 1; });
             document.getElementById('kuisSoalCount').innerText = `(${labels.length} soal)`;
+            if (typeof perbaruiStatusBarKuis === 'function') perbaruiStatusBarKuis();
         }
 
         function ambilSoalDariBuilder() {
@@ -6207,6 +6210,7 @@ D. Medan</pre>
             document.getElementById('floatCancelEditKuis').classList.add('hidden');
             document.getElementById('formKuis').reset();
             document.getElementById('kuis_acak').checked = true;
+            const dl = document.getElementById('kuisLanjutan'); if (dl) dl.open = false;
             document.getElementById('kuisSoalBuilder').innerHTML = '';
             G_KuisSoalBuilder = [];
             perbaruiNomorSoalKuis();
@@ -6339,53 +6343,64 @@ D. Medan</pre>
         }
 
         function renderKodeKuisGuru() {
-            const wrap = document.getElementById('kodeKuisIsi');
-            if (!wrap) return;
-            if (G_KodeKuis.length === 0) {
-                wrap.innerHTML = '<p class="text-xs text-amber-700">Belum ada kuis dengan Mode Ujian Terkunci aktif untuk mapel &amp; kelas Anda.</p>';
-                return;
-            }
-            wrap.innerHTML = G_KodeKuis.map((k, i) => `
-                <div class="bg-white border border-amber-200 rounded-xl p-3 flex items-center justify-between gap-3 shadow-sm">
-                    <div class="min-w-0">
-                        <p class="font-bold text-sm text-gray-800 truncate">${rekapEsc(k.judul)}</p>
-                        <p class="text-[11px] text-gray-400 truncate">${rekapEsc(k.kelas || 'Umum')} &bull; ganti dalam <span id="kkSisa${i}" class="font-bold text-amber-600">--:--</span></p>
-                    </div>
-                    <div id="kkKode${i}" class="font-mono font-extrabold text-2xl tracking-[0.2em] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-1.5 shrink-0">${k.kode.slice(0, 3)} ${k.kode.slice(3)}</div>
-                </div>`).join('');
+            // Kode ujian kini tampil di dalam kartu kuis (tab Pantau Kuis)
+            const peta = {};
+            G_KodeKuis.forEach(k => { peta[k.id] = k; });
+            document.querySelectorAll('#listKuisAdmin .kkKode').forEach(el => {
+                const k = peta[el.dataset.id];
+                el.textContent = k ? (k.kode.slice(0, 3) + ' ' + k.kode.slice(3)) : '--- ---';
+            });
             tickKodeKuisGuru();
         }
 
-        function tickKodeKuisGuru() {
+function tickKodeKuisGuru() {
             const dash = document.getElementById('dashKuis');
             if (!dash || dash.classList.contains('hidden') || !G_CurrentUser) return;
             const sekarang = Date.now();
             if (G_KodeKuis.some(k => k.habis <= sekarang) || sekarang - G_KodeKuisTerakhir > 60000) { muatKodeKuisGuru(); }
-            G_KodeKuis.forEach((k, i) => {
-                const el = document.getElementById('kkSisa' + i);
-                if (!el) return;
+            const peta = {};
+            G_KodeKuis.forEach(k => { peta[k.id] = k; });
+            document.querySelectorAll('#listKuisAdmin .kkSisa').forEach(el => {
+                const k = peta[el.dataset.id];
+                if (!k) return;
                 const d = Math.max(0, Math.round((k.habis - sekarang) / 1000));
                 el.innerText = String(Math.floor(d / 60)).padStart(2, '0') + ':' + String(d % 60).padStart(2, '0');
             });
         }
         setInterval(tickKodeKuisGuru, 1000);
 
-        // ---- Buka/tutup form buat kuis (daftar kuis tampil dulu agar tidak penuh) ----
+        // ---- Tab Pantau Kuis / Buat Kuis ----
+        function setTabKuis(buat) {
+            const aktif = 'px-5 py-2 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 bg-white text-amber-700 shadow-sm';
+            const pasif = 'px-5 py-2 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 text-gray-500 hover:text-amber-700';
+            const tp = document.getElementById('tabKuisPantau'), tb = document.getElementById('tabKuisBuat');
+            if (tp) tp.className = buat ? pasif : aktif;
+            if (tb) tb.className = buat ? aktif : pasif;
+            const pane = document.getElementById('kuisPanePantau');
+            if (pane) pane.classList.toggle('hidden', !!buat);
+        }
         function bukaFormKuis() {
             const c = document.getElementById('kuisFormCard');
             if (!c) return;
             c.classList.remove('hidden');
-            const l = document.getElementById('btnToggleFormKuisLabel'); if (l) l.innerText = 'Tutup Form';
+            setTabKuis(true);
+            const l = document.getElementById('btnToggleFormKuisLabel'); if (l) l.innerText = (EDIT_MODE.active && EDIT_MODE.type === 'kuis') ? 'Edit Kuis' : 'Buat Kuis';
             const jd = document.getElementById('kuisFormJudul');
             if (jd) jd.innerHTML = EDIT_MODE.active && EDIT_MODE.type === 'kuis'
                 ? '<i class="fas fa-pen-to-square text-amber-500 mr-2"></i> Edit Kuis'
                 : '<i class="fas fa-file-circle-question text-amber-500 mr-2"></i> Buat Kuis Online (Pilihan Ganda)';
+            // Soal pertama langsung tersedia agar tidak perlu klik tambah dulu
+            const sb = document.getElementById('kuisSoalBuilder');
+            if (sb && sb.children.length === 0) tambahBarisSoalKuis();
+            ringkasPengaturanKuis();
+            perbaruiStatusBarKuis();
             try { c.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
         }
         function tutupFormKuis() {
             const c = document.getElementById('kuisFormCard');
             if (c) c.classList.add('hidden');
-            const l = document.getElementById('btnToggleFormKuisLabel'); if (l) l.innerText = 'Buat Kuis Baru';
+            setTabKuis(false);
+            const l = document.getElementById('btnToggleFormKuisLabel'); if (l) l.innerText = 'Buat Kuis';
         }
         function toggleFormKuis() {
             const c = document.getElementById('kuisFormCard');
@@ -6393,6 +6408,91 @@ D. Medan</pre>
             if (c.classList.contains('hidden')) bukaFormKuis();
             else if (EDIT_MODE.active && EDIT_MODE.type === 'kuis') resetFormKuis();
             else tutupFormKuis();
+        }
+
+        // ---- Preset pengaturan & ringkasan ----
+        function terapkanPresetKuis(jenis) {
+            const ujian = (jenis === 'ujian');
+            document.getElementById('kuis_kunci_ujian').checked = ujian;
+            document.getElementById('kuis_acak').checked = ujian;
+            document.getElementById('kuis_kunci').checked = !ujian;
+            document.getElementById('kuis_durasi').value = ujian ? 60 : 15;
+            ringkasPengaturanKuis();
+        }
+        function ringkasPengaturanKuis() {
+            const el = document.getElementById('kuisRingkasan');
+            if (!el) return;
+            const p = [];
+            if (document.getElementById('kuis_kunci_ujian').checked) p.push('Terkunci');
+            if (document.getElementById('kuis_acak').checked) p.push('Soal diacak');
+            if (document.getElementById('kuis_kunci').checked) p.push('Kunci tampil');
+            el.innerText = p.length ? p.join(' • ') : 'Semua nonaktif';
+        }
+        function perbaruiStatusBarKuis() {
+            const bar = document.getElementById('kuisStatusBar'), wrap = document.getElementById('kuisSoalBuilder'), btn = document.getElementById('btnKuis');
+            if (!bar || !wrap) return;
+            const blocks = wrap.children, belum = [];
+            for (let i = 0; i < blocks.length; i++) {
+                try {
+                    const b = blocks[i];
+                    let ok = !!(b.querySelector('.soalPertanyaan').value.trim() || b.querySelector('.soalGambarUrl').value.trim());
+                    b.querySelectorAll('.opsiRowWrap').forEach(r => {
+                        if (!r.querySelector('.soalOpsi').value.trim() && !r.querySelector('.opsiGambarUrl').value.trim()) ok = false;
+                    });
+                    if (!ok) belum.push(i + 1);
+                } catch (e) {}
+            }
+            const n = blocks.length;
+            let siap = false;
+            if (n === 0) { bar.className = 'text-xs font-bold text-gray-500 flex-1 min-w-[140px]'; bar.innerText = 'Belum ada soal. Klik "Tambah Soal".'; }
+            else if (belum.length) { bar.className = 'text-xs font-bold text-amber-600 flex-1 min-w-[140px]'; bar.innerText = n + ' soal • belum lengkap: no. ' + (belum.length > 6 ? belum.slice(0, 6).join(', ') + ', ...' : belum.join(', ')); }
+            else { siap = true; bar.className = 'text-xs font-bold text-emerald-600 flex-1 min-w-[140px]'; bar.innerText = n + ' soal • siap diterbitkan'; }
+            if (btn && !btn.dataset.sibuk) {
+                btn.disabled = !siap;
+                btn.classList.toggle('opacity-50', !siap);
+                btn.classList.toggle('cursor-not-allowed', !siap);
+            }
+        }
+
+        // ---- Siswa target sebuah kuis (aturan sama dengan daftar kuis siswa) ----
+        function kuisSiswaTarget(k) {
+            const t = String(k[3] || '').toLowerCase();
+            const umum = !t || t === 'umum' || t === 'umum (semua kelas)';
+            const ada = {};
+            return (G_Siswa || []).filter(s => {
+                const nama = s[2];
+                if (!nama || ada[nama]) return false;
+                let cocok = false;
+                const u = String(s[3] || '').toLowerCase();
+                if (umum) cocok = true;
+                else if (u) {
+                    if (t.includes(u) || u.includes(t)) cocok = true;
+                    else if ((t.includes('kelas 10') || t === '10' || t === 'x') && u.match(/\b(10|x)\b/)) cocok = true;
+                    else if ((t.includes('kelas 11') || t === '11' || t === 'xi') && u.match(/\b(11|xi)\b/)) cocok = true;
+                    else if ((t.includes('kelas 12') || t === '12' || t === 'xii') && u.match(/\b(12|xii)\b/)) cocok = true;
+                }
+                if (cocok) ada[nama] = true;
+                return cocok;
+            });
+        }
+
+        function lihatBelumKuis(idx) {
+            const k = G_Kuis[idx];
+            if (!k) return;
+            const sudah = {};
+            G_HasilKuis.filter(h => h[1] === k[1]).forEach(h => { sudah[h[2]] = true; });
+            const belum = kuisSiswaTarget(k).filter(s => !sudah[s[2]]);
+            let html;
+            if (belum.length === 0) {
+                html = '<p class="text-sm text-emerald-600 font-bold py-4"><i class="fas fa-circle-check mr-1"></i> Semua siswa sudah mengumpulkan.</p>';
+            } else {
+                const per = {};
+                belum.forEach(s => { const kl = s[3] || 'Tanpa kelas'; (per[kl] = per[kl] || []).push(s[2]); });
+                html = '<div class="text-left max-h-80 overflow-y-auto space-y-3 mt-2">' + Object.keys(per).sort().map(kl =>
+                    '<div><p class="text-[11px] font-extrabold text-indigo-700 uppercase mb-1">' + rekapEsc(kl) + ' (' + per[kl].length + ')</p><ul class="text-sm text-gray-700 space-y-0.5">' +
+                    per[kl].sort((a, b) => String(a).localeCompare(String(b))).map(n => '<li class="border-b border-gray-100 py-1">' + rekapEsc(n) + '</li>').join('') + '</ul></div>').join('') + '</div>';
+            }
+            Swal.fire({ title: '<span class="text-base">Belum mengumpulkan (' + belum.length + ')</span>', html: html, confirmButtonText: 'Tutup', confirmButtonColor: '#d97706' });
         }
 
         function renderKuisAdminList(dariCari) {
@@ -6403,24 +6503,37 @@ D. Medan</pre>
             if (badge) badge.innerText = G_Kuis.filter(k => milikGuruLogin(k[9], k[4], k[3])).length;
             wrap.innerHTML = '';
             if (G_Kuis.length === 0) {
-                wrap.innerHTML = `<div class="md:col-span-2 xl:col-span-2 p-8 text-center text-gray-500 border border-dashed border-gray-300 rounded-2xl bg-white"><p class="font-bold text-sm">Belum ada kuis yang diterbitkan.</p><p class="text-xs mt-1">Klik "Buat Kuis Baru" di atas untuk memulai.</p></div>`;
+                wrap.innerHTML = `<div class="xl:col-span-2 p-8 text-center text-gray-500 border border-dashed border-gray-300 rounded-2xl bg-white"><p class="font-bold text-sm">Belum ada kuis yang diterbitkan.</p><button type="button" onclick="bukaFormKuis()" class="mt-3 bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-lg text-sm"><i class="fas fa-plus mr-1"></i> Buat Kuis Pertama</button></div>`;
                 return;
             }
             const cariEl = document.getElementById('kuisCari');
             const q = ((cariEl && cariEl.value) || '').toString().trim().toLowerCase();
-            let tampil = 0;
+            let tampil = 0, html = '';
             G_Kuis.forEach((k, idx) => {
                 if (!milikGuruLogin(k[9], k[4], k[3])) return;
                 if (q && ![k[2], k[3], k[4]].some(v => String(v || '').toLowerCase().includes(q))) return;
                 tampil++;
                 let soalCount = 0;
                 try { soalCount = JSON.parse(k[10] || '[]').length; } catch (e) {}
-                const jumlahPeserta = G_HasilKuis.filter(h => h[1] === k[1]).length;
+                const hasil = G_HasilKuis.filter(h => h[1] === k[1]);
+                const jumlahPeserta = hasil.length;
                 const terkunci = !!k[12] && String(k[12]).toUpperCase() !== 'TIDAK';
                 const judulAman = rekapEsc(k[2]);
-                wrap.innerHTML += `
+
+                // Progres pengumpulan
+                const target = kuisSiswaTarget(k);
+                const sudahMap = {}; hasil.forEach(h => { sudahMap[h[2]] = true; });
+                const total = target.length;
+                const sudah = total ? target.filter(s => sudahMap[s[2]]).length : Object.keys(sudahMap).length;
+                const persen = total ? Math.round(sudah / total * 100) : 0;
+                const skor = hasil.map(h => parseFloat(h[4])).filter(x => !isNaN(x));
+                const rata = skor.length ? Math.round(skor.reduce((a, b) => a + b, 0) / skor.length) : null;
+                const tinggi = skor.length ? Math.round(Math.max.apply(null, skor)) : null;
+                const warnaBar = persen >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
+
+                html += `
                 <div class="relative bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden flex flex-col">
-                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-amber-500"></div>
+                    <div class="absolute left-0 top-0 bottom-0 w-1 ${persen >= 100 ? 'bg-emerald-500' : 'bg-amber-500'}"></div>
                     <div class="p-3.5 pl-5 flex-1">
                         <div class="flex items-start justify-between gap-3">
                             <h4 class="font-bold text-gray-800 text-sm sm:text-base leading-snug">${judulAman}</h4>
@@ -6436,16 +6549,33 @@ D. Medan</pre>
                             ${k[6] ? `<span class="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-1 rounded-md"><i class="fas fa-flag-checkered mr-1"></i>KKM ${k[6]}</span>` : ''}
                             ${terkunci ? `<span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md"><i class="fas fa-lock mr-1"></i>Terkunci</span>` : ''}
                         </div>
+
+                        ${terkunci ? `
+                        <div class="mt-3 flex items-center justify-between gap-3 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
+                            <div class="min-w-0"><p class="text-[10px] font-bold text-indigo-400 uppercase leading-none">Kode ujian</p><p class="text-[10px] text-gray-400 mt-1">ganti dalam <span class="kkSisa font-bold text-amber-600" data-id="${rekapEsc(k[1])}">--:--</span></p></div>
+                            <div class="kkKode font-mono font-extrabold text-2xl tracking-[0.2em] text-indigo-700" data-id="${rekapEsc(k[1])}">--- ---</div>
+                        </div>` : ''}
+
+                        <div class="mt-3">
+                            <div class="flex items-center justify-between text-xs mb-1">
+                                <span class="font-bold text-gray-700">${total ? `${sudah}/${total} siswa sudah mengumpulkan` : `${sudah} siswa sudah mengumpulkan`}</span>
+                                ${rata !== null ? `<span class="text-gray-500">Rata-rata <b class="text-gray-800">${rata}</b> &bull; Tertinggi <b class="text-gray-800">${tinggi}</b></span>` : ''}
+                            </div>
+                            ${total ? `<div class="h-2 bg-gray-100 rounded-full overflow-hidden"><div class="h-full ${warnaBar} rounded-full transition-all" style="width:${persen}%"></div></div>` : ''}
+                            ${total && sudah < total ? `<button type="button" onclick="lihatBelumKuis(${idx})" class="mt-2 text-[11px] font-bold text-rose-600 hover:text-rose-700 underline underline-offset-2"><i class="fas fa-user-clock mr-1"></i>Lihat yang belum (${total - sudah})</button>` : ''}
+                        </div>
                     </div>
                     <button onclick="lihatHasilKuis('${k[1]}', '${judulAman.replace(/'/g, "\\'")}')" class="w-full text-xs bg-amber-50 text-amber-700 font-bold px-4 py-2.5 hover:bg-amber-100 transition border-t border-amber-100 active:scale-[0.99]"><i class="fas fa-chart-simple mr-1"></i> Lihat Rekap Nilai <span class="bg-amber-600 text-white rounded-full px-1.5 py-0.5 ml-1 text-[10px]">${jumlahPeserta}</span></button>
                 </div>`;
             });
+            wrap.innerHTML = html;
             if (tampil === 0) {
-                wrap.innerHTML = `<div class="md:col-span-2 xl:col-span-2 p-6 text-center text-gray-500 border border-dashed border-gray-300 rounded-2xl bg-white"><p class="font-bold text-sm">Tidak ada kuis yang cocok dengan pencarian.</p></div>`;
+                wrap.innerHTML = `<div class="xl:col-span-2 p-6 text-center text-gray-500 border border-dashed border-gray-300 rounded-2xl bg-white"><p class="font-bold text-sm">Tidak ada kuis yang cocok dengan pencarian.</p></div>`;
             }
+            if (G_KodeKuis.length) renderKodeKuisGuru();
         }
 
-        // ================= GURU: REKAP NILAI KUIS (FILTER + EKSPOR) =================
+// ================= GURU: REKAP NILAI KUIS (FILTER + EKSPOR) =================
         let G_RekapKuis = { kuisId: '', judul: '', kkm: '', semua: [] };
 
         function rekapEsc(s) {
