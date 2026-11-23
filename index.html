@@ -980,6 +980,16 @@
             </div>
         </div>
 
+        <!-- ================= GERBANG LAYAR PENUH UJIAN ================= -->
+        <div id="kuisFsOverlay" class="hidden fixed inset-0 z-[99985] bg-slate-900/95 flex items-center justify-center p-5 no-print">
+            <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center">
+                <div class="w-16 h-16 mx-auto rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-3xl mb-3"><i class="fas fa-expand"></i></div>
+                <h3 class="font-extrabold text-lg text-gray-800">Ujian Wajib Layar Penuh</h3>
+                <p class="text-sm text-gray-500 mt-1 mb-4">Tekan tombol di bawah untuk masuk mode layar penuh. Soal baru bisa dikerjakan setelah layar penuh aktif.</p>
+                <button type="button" onclick="masukFullscreenKuis()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl"><i class="fas fa-expand mr-1"></i> Masuk Layar Penuh</button>
+            </div>
+        </div>
+
         <!-- ================= OVERLAY KUNCI KUIS (PENGAWAS) ================= -->
         <div id="kuisKunciOverlay" class="hidden fixed inset-0 z-[99990] bg-slate-900 flex items-center justify-center p-5 no-print">
             <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center">
@@ -6591,6 +6601,14 @@ D. Medan</pre>
                 try { const p = fn.call(el); if (p && p.catch) p.catch(() => {}); } catch (e) {}
             }
         }
+        function cekGateFullscreen() {
+            const o = document.getElementById('kuisFsOverlay');
+            if (!o) return;
+            if (!pengawasAktif() || !adaFullscreen()) { o.classList.add('hidden'); return; }
+            const fs = document.fullscreenElement || document.webkitFullscreenElement;
+            o.classList.toggle('hidden', !!fs || G_KuisTerkunci);
+        }
+        function masukFullscreenKuis() { mintaFullscreen(); setTimeout(cekGateFullscreen, 500); }
         function tampilkanKunci(alasan) {
             document.getElementById('kuisKunciAlasan').innerText = alasan || 'Kamu keluar dari halaman kuis.';
             document.getElementById('kuisKunciJml').innerText = G_KuisPelanggaran;
@@ -6611,12 +6629,15 @@ D. Medan</pre>
             document.getElementById('kuisKunciOverlay').classList.add('hidden');
             simpanSesiKuis();
             mintaFullscreen();
+            setTimeout(cekGateFullscreen, 700);
             tickKuis();
         }
         // Dipanggil dari jalankanSesiKuis (sebelum render pertama)
         function aktifkanPengawasKuis(kuisRow) {
             G_KuisKode = (kuisRow[12] || '').toString();
             G_KuisTerkunci = false; G_KuisPelanggaran = 0;
+            mintaFullscreen(); // langsung layar penuh saat ujian dimulai
+            setTimeout(cekGateFullscreen, 700);
             if (!G_KuisKode) return; // kuis lama tanpa Kode Buka: pengawas nonaktif
             const s = bacaSesiKuis(G_KuisAktif.id);
             if (s) { G_KuisPelanggaran = s.pelanggaran || 0; G_KuisTerkunci = !!s.terkunci; }
@@ -6647,6 +6668,7 @@ D. Medan</pre>
         // Keluar dari layar penuh (hanya jika perangkat mendukung; iPhone Safari tidak)
         ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => {
             if (pengawasAktif() && adaFullscreen() && !document.fullscreenElement && !document.webkitFullscreenElement) kunciKuis('Kamu keluar dari layar penuh.');
+            setTimeout(cekGateFullscreen, 100);
         }));
         // Blok salin / tempel / klik kanan / seleksi teks di layar kuis
         ['contextmenu', 'copy', 'cut', 'paste', 'selectstart'].forEach(ev => document.addEventListener(ev, e => {
@@ -6663,6 +6685,7 @@ D. Medan</pre>
             if (v && v.classList.contains('hidden')) {
                 G_KuisTerkunci = false; G_KuisKode = '';
                 document.getElementById('kuisKunciOverlay').classList.add('hidden');
+                document.getElementById('kuisFsOverlay').classList.add('hidden');
                 if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
             }
         }).observe(document.getElementById('viewKuisPengerjaan'), { attributes: true, attributeFilter: ['class'] });
