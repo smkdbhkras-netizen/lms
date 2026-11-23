@@ -618,7 +618,7 @@
                     <div id="dashKuis" class="admin-tab hidden space-y-4 sm:space-y-6 h-full flex-col">
                         <div id="kodeKuisPanel" class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 shrink-0">
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-3">
-                                <h3 class="font-bold text-sm sm:text-base text-amber-800"><i class="fas fa-key mr-1"></i> Kode Ujian Saya <span class="font-normal text-xs text-amber-600">(masuk &amp; keluar, dibuat otomatis, berganti tiap 10 menit)</span></h3>
+                                <h3 class="font-bold text-sm sm:text-base text-amber-800"><i class="fas fa-key mr-1"></i> Kode Ujian Saya <span class="font-normal text-xs text-amber-600">(masuk &amp; keluar, dibuat otomatis, berganti tiap 30 menit)</span></h3>
                                 <span class="text-[11px] text-amber-700">Berikan ke siswa yang meminta kode masuk/keluar ujian.</span>
                             </div>
                             <div id="kodeKuisIsi" class="grid grid-cols-1 sm:grid-cols-2 gap-3"><p class="text-xs text-amber-700">Memuat kode...</p></div>
@@ -640,7 +640,7 @@
                                 </div>
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                                     <input type="hidden" id="kuis_sandi" value="">
-                                    <div class="col-span-2 md:col-span-4 flex items-end pb-2.5"><label class="flex items-start gap-2 text-xs sm:text-sm font-medium text-gray-600 cursor-pointer"><input type="checkbox" id="kuis_kunci_ujian" checked class="w-4 h-4 mt-0.5 rounded text-amber-600 focus:ring-amber-500"> <span>Mode Ujian Terkunci <span class="block text-[11px] font-normal text-gray-400">Kode MASUK &amp; KELUAR dibuat otomatis oleh sistem dan berganti tiap 10 menit. Tidak perlu diisi manual, lihat di panel Kode Ujian.</span></span></label></div>
+                                    <div class="col-span-2 md:col-span-4 flex items-end pb-2.5"><label class="flex items-start gap-2 text-xs sm:text-sm font-medium text-gray-600 cursor-pointer"><input type="checkbox" id="kuis_kunci_ujian" checked class="w-4 h-4 mt-0.5 rounded text-amber-600 focus:ring-amber-500"> <span>Mode Ujian Terkunci <span class="block text-[11px] font-normal text-gray-400">Kode MASUK &amp; KELUAR dibuat otomatis oleh sistem dan berganti tiap 30 menit. Tidak perlu diisi manual, lihat di panel Kode Ujian.</span></span></label></div>
                                 </div>
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                                     <div><label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Durasi (menit)</label><input type="number" id="kuis_durasi" min="1" value="10" required class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"></div>
@@ -6130,7 +6130,7 @@ D. Medan</pre>
         }
 
         // ================= GURU: DAFTAR KUIS & REKAP HASIL =================
-        // ================= GURU: PANEL KODE UJIAN (BERGANTI TIAP 10 MENIT) =================
+        // ================= GURU: PANEL KODE UJIAN (BERGANTI TIAP 30 MENIT) =================
         let G_KodeKuis = [], G_KodeKuisLoading = false, G_KodeKuisTerakhir = 0;
 
         function muatKodeKuisGuru() {
@@ -6154,7 +6154,7 @@ D. Medan</pre>
             } else {
                 // Mode simulasi (tanpa server)
                 selesai(G_Kuis.filter(k => k[9] === G_CurrentUser.nama && k[12] && String(k[12]).toUpperCase() !== 'TIDAK')
-                    .map(k => ({ id: k[1], judul: k[2], kelas: k[3], kode: '000000', sisaDetik: 600 })));
+                    .map(k => ({ id: k[1], judul: k[2], kelas: k[3], kode: '000000', sisaDetik: 1800 })));
             }
         }
 
@@ -6655,7 +6655,7 @@ D. Medan</pre>
         // ================= PENGAWAS KUIS (KUNCI LAYAR, BUKA DENGAN KODE GURU) =================
         // true  = siswa harus memasukkan kode dari guru untuk KELUAR dari ujian (saat menekan Kumpulkan)
         // false = siswa bisa mengumpulkan sendiri (kode hanya untuk membuka kunci saat terkunci)
-        const KUIS_KODE_UNTUK_SELESAI = true;
+        const KUIS_KODE_UNTUK_SELESAI = false;
         let G_KuisTerkunci = false, G_KuisPelanggaran = 0, G_KuisKode = '', G_KuisLockTimer = null;
 
         function pengawasAktif() {
@@ -6686,12 +6686,11 @@ D. Medan</pre>
             document.getElementById('kuisKunciOverlay').classList.remove('hidden');
         }
         function kunciKuis(alasan) {
-            if (!pengawasAktif() || G_KuisTerkunci) return;
-            G_KuisTerkunci = true; G_KuisPelanggaran++;
-            simpanSesiKuis();
-            tampilkanKunci(alasan);
+            // Tidak ada pelanggaran/penguncian lagi: cukup minta siswa kembali ke layar penuh
+            if (!pengawasAktif()) return;
+            setTimeout(cekGateFullscreen, 100);
         }
-        // Cek kode ke server (kode berganti tiap 10 menit, dibuat otomatis di server)
+        // Cek kode ke server (kode berganti tiap 30 menit, dibuat otomatis di server)
         function verifikasiKodeGuru(kode, kuisId) {
             kode = (kode || '').toString().trim();
             return new Promise(resolve => {
@@ -6728,10 +6727,9 @@ D. Medan</pre>
             setTimeout(cekGateFullscreen, 700);
             if (!G_KuisKode) return; // kuis lama tanpa Kode Buka: pengawas nonaktif
             const s = bacaSesiKuis(G_KuisAktif.id);
-            if (s) { G_KuisPelanggaran = s.pelanggaran || 0; G_KuisTerkunci = !!s.terkunci; }
+            G_KuisPelanggaran = 0; G_KuisTerkunci = false;
             mintaFullscreen();
             try { history.pushState({ kuis: 1 }, '', location.href); } catch (e) {}
-            if (G_KuisTerkunci) tampilkanKunci('Kuis sempat ditutup/dimuat ulang saat terkunci.');
         }
 
         // Pindah tab / minimize / ganti aplikasi (HP & laptop)
@@ -6745,7 +6743,7 @@ D. Medan</pre>
         window.addEventListener('focus', () => clearTimeout(G_KuisLockTimer));
         // Halaman ditutup / di-refresh / ditinggalkan: tetap terkunci saat dibuka lagi
         window.addEventListener('pagehide', () => {
-            if (pengawasAktif() && !G_KuisTerkunci) { G_KuisTerkunci = true; G_KuisPelanggaran++; simpanSesiKuis(); }
+            // (tidak ada penguncian lagi)
         });
         // Tombol Kembali (browser/HP) tidak bisa dipakai keluar dari ujian
         window.addEventListener('popstate', () => {
@@ -6793,7 +6791,7 @@ D. Medan</pre>
             Swal.fire({
                 title: 'Keluar dari Ujian?',
                 html: '<div class="text-sm text-gray-600 space-y-1.5"><p>Jawabanmu tersimpan, tapi <b>waktu ujian tetap berjalan</b>.</p>' + (perluKode ? '<p class="text-xs text-amber-600 font-bold"><i class="fas fa-key mr-1"></i> Masukkan kode keluar dari guru.</p>' : '') + '</div>',
-                icon: 'warning', showCancelButton: true, confirmButtonText: 'Keluar', cancelButtonText: 'Kembali ke Ujian', confirmButtonColor: '#dc2626',
+                icon: 'warning', showCancelButton: true, showCloseButton: true, confirmButtonText: 'Keluar', cancelButtonText: 'Kembali ke Ujian', confirmButtonColor: '#dc2626',
                 input: perluKode ? 'password' : undefined,
                 inputPlaceholder: perluKode ? 'Kode dari guru' : undefined,
                 inputAttributes: { autocapitalize: 'off', autocorrect: 'off', autocomplete: 'off' },
@@ -6881,7 +6879,7 @@ D. Medan</pre>
 
             const sandiAsli = (kuisRow[11] || '').toString();
             const modeM = (kuisRow[12] || '').toString().trim();
-            const modeAktif = !!modeM && modeM.toUpperCase() !== 'TIDAK'; // true = kode masuk otomatis dari sistem (ganti tiap 10 menit)
+            const modeAktif = !!modeM && modeM.toUpperCase() !== 'TIDAK'; // true = kode masuk otomatis dari sistem (ganti tiap 30 menit)
 
             Swal.fire({
                 title: kuisRow[2],
@@ -7166,7 +7164,7 @@ D. Medan</pre>
                         <p><b class="text-emerald-600">${terjawab}</b> soal terjawab, <b class="${belumDijawab > 0 ? 'text-red-500' : 'text-gray-700'}">${belumDijawab}</b> belum dijawab${raguJml > 0 ? `, <b class="text-amber-600">${raguJml}</b> ditandai ragu-ragu` : ''}.</p>
                         <p class="text-xs text-gray-400">Jawaban tidak dapat diubah setelah dikumpulkan.</p>${(KUIS_KODE_UNTUK_SELESAI && G_KuisKode) ? '<p class="text-xs text-amber-600 font-bold"><i class="fas fa-key mr-1"></i> Untuk keluar dari ujian, masukkan kode dari guru.</p>' : ''}
                     </div>`,
-                    icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Kumpulkan', cancelButtonText: 'Periksa Lagi', confirmButtonColor: '#059669',
+                    icon: 'warning', showCancelButton: true, showCloseButton: true, confirmButtonText: 'Ya, Kumpulkan', cancelButtonText: 'Periksa Lagi', confirmButtonColor: '#059669',
                     input: (KUIS_KODE_UNTUK_SELESAI && G_KuisKode) ? 'password' : undefined,
                     inputPlaceholder: (KUIS_KODE_UNTUK_SELESAI && G_KuisKode) ? 'Kode keluar dari guru' : undefined,
                     inputAttributes: { autocapitalize: 'off', autocorrect: 'off', autocomplete: 'off' },
