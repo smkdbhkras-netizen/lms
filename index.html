@@ -618,7 +618,7 @@
                     <div id="dashKuis" class="admin-tab hidden space-y-4 sm:space-y-6 h-full flex-col">
                         <div id="kodeKuisPanel" class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 shrink-0">
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-3">
-                                <h3 class="font-bold text-sm sm:text-base text-amber-800"><i class="fas fa-key mr-1"></i> Kode Ujian Saya <span class="font-normal text-xs text-amber-600">(berganti otomatis tiap 10 menit)</span></h3>
+                                <h3 class="font-bold text-sm sm:text-base text-amber-800"><i class="fas fa-key mr-1"></i> Kode Ujian Saya <span class="font-normal text-xs text-amber-600">(masuk &amp; keluar, dibuat otomatis, berganti tiap 10 menit)</span></h3>
                                 <span class="text-[11px] text-amber-700">Berikan ke siswa yang meminta kode masuk/keluar ujian.</span>
                             </div>
                             <div id="kodeKuisIsi" class="grid grid-cols-1 sm:grid-cols-2 gap-3"><p class="text-xs text-amber-700">Memuat kode...</p></div>
@@ -639,8 +639,8 @@
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                                    <div class="col-span-2"><label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Sandi Kuis <span class="normal-case font-normal text-gray-400">(wajib diisi siswa saat mulai)</span></label><input type="text" id="kuis_sandi" required placeholder="cth: bk2024" class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"></div>
-                                    <div class="col-span-2 flex items-end pb-2.5"><label class="flex items-start gap-2 text-xs sm:text-sm font-medium text-gray-600 cursor-pointer"><input type="checkbox" id="kuis_kunci_ujian" checked class="w-4 h-4 mt-0.5 rounded text-amber-600 focus:ring-amber-500"> <span>Mode Ujian Terkunci <span class="block text-[11px] font-normal text-gray-400">Kode masuk/keluar otomatis berganti tiap 10 menit (lihat panel Kode Ujian)</span></span></label></div>
+                                    <input type="hidden" id="kuis_sandi" value="">
+                                    <div class="col-span-2 md:col-span-4 flex items-end pb-2.5"><label class="flex items-start gap-2 text-xs sm:text-sm font-medium text-gray-600 cursor-pointer"><input type="checkbox" id="kuis_kunci_ujian" checked class="w-4 h-4 mt-0.5 rounded text-amber-600 focus:ring-amber-500"> <span>Mode Ujian Terkunci <span class="block text-[11px] font-normal text-gray-400">Kode MASUK &amp; KELUAR dibuat otomatis oleh sistem dan berganti tiap 10 menit. Tidak perlu diisi manual, lihat di panel Kode Ujian.</span></span></label></div>
                                 </div>
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                                     <div><label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Durasi (menit)</label><input type="number" id="kuis_durasi" min="1" value="10" required class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"></div>
@@ -6142,9 +6142,14 @@ D. Medan</pre>
                 renderKodeKuisGuru();
             };
             if (typeof google !== 'undefined' && google.script) {
+                const gagal = (pesan) => {
+                    G_KodeKuisLoading = false;
+                    const w = document.getElementById('kodeKuisIsi');
+                    if (w) w.innerHTML = '<p class="text-xs text-red-600 font-bold">' + rekapEsc(pesan) + '</p>';
+                };
                 google.script.run
-                    .withSuccessHandler(res => selesai(res && res.success ? res.items : []))
-                    .withFailureHandler(() => { G_KodeKuisLoading = false; })
+                    .withSuccessHandler(res => { if (res && res.success) selesai(res.items); else gagal((res && res.message) || 'Gagal memuat kode ujian.'); })
+                    .withFailureHandler(err => gagal('Gagal memuat kode. Pastikan backend Apps Script sudah versi terbaru dan di-deploy ulang (New version). ' + ((err && err.message) || '')))
                     .getKodeKuisGuru(G_CurrentUser.nama);
             } else {
                 // Mode simulasi (tanpa server)
@@ -6687,7 +6692,7 @@ D. Medan</pre>
             tampilkanKunci(alasan);
         }
         // Cek kode ke server (kode berganti tiap 10 menit, dibuat otomatis di server)
-        function verifikasiKodeGuru(kode) {
+        function verifikasiKodeGuru(kode, kuisId) {
             kode = (kode || '').toString().trim();
             return new Promise(resolve => {
                 if (!kode) return resolve({ valid: false, message: 'Masukkan kode dari guru.' });
@@ -6695,7 +6700,7 @@ D. Medan</pre>
                     google.script.run
                         .withSuccessHandler(r => resolve(r || { valid: false, message: 'Kode salah.' }))
                         .withFailureHandler(() => resolve({ valid: false, message: 'Gagal terhubung ke server. Cek internet lalu coba lagi.' }))
-                        .verifikasiKodeKuis(G_KuisAktif ? G_KuisAktif.id : '', kode, (G_CurrentUser && G_CurrentUser.nama) || '');
+                        .verifikasiKodeKuis(kuisId || (G_KuisAktif ? G_KuisAktif.id : ''), kode, (G_CurrentUser && G_CurrentUser.nama) || '');
                 } else {
                     resolve({ valid: kode === '000000', message: 'Mode simulasi: gunakan kode 000000.' });
                 }
@@ -6875,6 +6880,8 @@ D. Medan</pre>
             }
 
             const sandiAsli = (kuisRow[11] || '').toString();
+            const modeM = (kuisRow[12] || '').toString().trim();
+            const modeAktif = !!modeM && modeM.toUpperCase() !== 'TIDAK'; // true = kode masuk otomatis dari sistem (ganti tiap 10 menit)
 
             Swal.fire({
                 title: kuisRow[2],
@@ -6884,10 +6891,16 @@ D. Medan</pre>
                     <p class="text-xs text-amber-600 mt-2"><i class="fas fa-triangle-exclamation mr-1"></i> Pastikan koneksi internet stabil. Jika tidak sengaja keluar, buka lagi kuis ini untuk melanjutkan.</p>
                 </div>`,
                 icon: 'info', showCancelButton: true, confirmButtonText: 'Mulai Sekarang', cancelButtonText: 'Batal', confirmButtonColor: '#d97706',
-                input: sandiAsli ? 'password' : undefined,
-                inputPlaceholder: sandiAsli ? 'Masukkan sandi kuis dari guru' : undefined,
+                input: (modeAktif || sandiAsli) ? 'password' : undefined,
+                inputPlaceholder: modeAktif ? 'Kode masuk dari guru' : (sandiAsli ? 'Masukkan sandi kuis dari guru' : undefined),
                 inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
                 preConfirm: (value) => {
+                    if (modeAktif) {
+                        return verifikasiKodeGuru(value, kuisId).then(r => {
+                            if (!r.valid) { Swal.showValidationMessage(r.message || 'Kode salah. Minta kode masuk ke guru.'); return false; }
+                            return true;
+                        });
+                    }
                     if (sandiAsli && (value || '').toString() !== sandiAsli) {
                         Swal.showValidationMessage('Sandi kuis salah. Tanyakan sandi ke guru BK.');
                         return false;
