@@ -7016,10 +7016,9 @@ D. Medan</pre>
             btnPrev.disabled = isFirst;
             btnPrev.classList.toggle('opacity-40', isFirst);
             document.getElementById('btnKuisNext').classList.toggle('hidden', isLast);
-            // Tombol "Kumpulkan" selalu tampil di semua nomor soal,
-            // sehingga siswa bisa mengumpulkan kapan saja walau waktu belum habis.
+            // Tombol "Kumpulkan" hanya tampil di soal terakhir.
             const btnSelesai = document.getElementById('btnKuisSelesai');
-            btnSelesai.classList.remove('hidden');
+            btnSelesai.classList.toggle('hidden', !isLast);
             btnSelesai.classList.toggle('flex-1', isLast);
             document.getElementById('btnKuisSelesaiLabel').innerText = isLast ? 'Selesai & Kumpulkan' : 'Kumpulkan';
 
