@@ -6657,6 +6657,17 @@ D. Medan</pre>
         // false = siswa bisa mengumpulkan sendiri (kode hanya untuk membuka kunci saat terkunci)
         const KUIS_KODE_UNTUK_SELESAI = false;
         let G_KuisTerkunci = false, G_KuisPelanggaran = 0, G_KuisKode = '', G_KuisLockTimer = null;
+        // ===== MODE KOMPUTER (CBT KETAT) =====
+        // true  = di komputer/laptop, keluar layar penuh / pindah tab / ganti jendela / layar kedua / DevTools
+        //         langsung mengunci kuis; buka kunci hanya dengan kode guru.
+        // false = mematikan mode ketat (HP/tablet tidak pernah terkena mode ini).
+        const KUIS_KETAT_KOMPUTER = true;
+        function modeKomputer() {
+            try {
+                const hp = /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/i.test(navigator.userAgent));
+                return KUIS_KETAT_KOMPUTER && !hp && window.matchMedia('(pointer: fine)').matches;
+            } catch (e) { return false; }
+        }
 
         function pengawasAktif() {
             const v = document.getElementById('viewKuisPengerjaan');
@@ -6686,8 +6697,16 @@ D. Medan</pre>
             document.getElementById('kuisKunciOverlay').classList.remove('hidden');
         }
         function kunciKuis(alasan) {
-            // Tidak ada pelanggaran/penguncian lagi: cukup minta siswa kembali ke layar penuh
             if (!pengawasAktif()) return;
+            if (modeKomputer()) {
+                // Komputer: kunci seketika, buka hanya dengan kode guru
+                if (G_KuisTerkunci) return;
+                G_KuisTerkunci = true; G_KuisPelanggaran++;
+                simpanSesiKuis();
+                tampilkanKunci(alasan);
+                return;
+            }
+            // HP/tablet: cukup minta siswa kembali ke layar penuh
             setTimeout(cekGateFullscreen, 100);
         }
         // Cek kode ke server (kode berganti tiap 30 menit, dibuat otomatis di server)
@@ -6728,8 +6747,10 @@ D. Medan</pre>
             if (!G_KuisKode) return; // kuis lama tanpa Kode Buka: pengawas nonaktif
             const s = bacaSesiKuis(G_KuisAktif.id);
             G_KuisPelanggaran = 0; G_KuisTerkunci = false;
+            if (modeKomputer() && s) { G_KuisPelanggaran = s.pelanggaran || 0; G_KuisTerkunci = !!s.terkunci; }
             mintaFullscreen();
-            try { history.pushState({ kuis: 1 }, '', location.href); } catch (e) {}
+            try { for (let i = 0; i < 5; i++) history.pushState({ kuis: 1 }, '', location.href); } catch (e) {}
+            if (G_KuisTerkunci) tampilkanKunci('Kuis sempat ditutup/dimuat ulang saat terkunci.');
         }
 
         // Pindah tab / minimize / ganti aplikasi (HP & laptop)
@@ -6743,12 +6764,19 @@ D. Medan</pre>
         window.addEventListener('focus', () => clearTimeout(G_KuisLockTimer));
         // Halaman ditutup / di-refresh / ditinggalkan: tetap terkunci saat dibuka lagi
         window.addEventListener('pagehide', () => {
-            // (tidak ada penguncian lagi)
+            if (modeKomputer() && pengawasAktif() && !G_KuisTerkunci) { G_KuisTerkunci = true; G_KuisPelanggaran++; simpanSesiKuis(); }
+        });
+        // Tutup tab / refresh / klik X browser: browser menampilkan konfirmasi "Tinggalkan situs?"
+        window.addEventListener('beforeunload', e => {
+            if (!pengawasAktif()) return;
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
         });
         // Tombol Kembali (browser/HP) tidak bisa dipakai keluar dari ujian
         window.addEventListener('popstate', () => {
             if (!pengawasAktif()) return;
-            try { history.pushState({ kuis: 1 }, '', location.href); } catch (e) {}
+            try { for (let i = 0; i < 3; i++) history.pushState({ kuis: 1 }, '', location.href); } catch (e) {}
             // Tombol Kembali diabaikan (bukan pelanggaran): cukup diingatkan lewat toast
             try { Swal.fire({ toast: true, position: 'top', icon: 'info', title: 'Tombol kembali dinonaktifkan. Gunakan tombol Keluar + kode guru.', showConfirmButton: false, timer: 2500 }); } catch (e) {}
         });
@@ -6764,7 +6792,10 @@ D. Medan</pre>
         document.addEventListener('keydown', e => {
             if (!pengawasAktif()) return;
             const k = (e.key || '').toLowerCase();
-            if (e.key === 'Escape' || e.key === 'F12' || (e.ctrlKey && ['p', 's', 'u'].includes(k)) || (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(k))) e.preventDefault();
+            if (e.key === 'Escape' || e.key === 'F12' || e.key === 'F5' || e.key === 'F11'
+                || (e.ctrlKey && ['p', 's', 'u', 'r', 'w', 't', 'n', 'l'].includes(k))
+                || (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))
+                || (e.ctrlKey && e.shiftKey && ['i', 'j', 'c', 'r', 't', 'n', 'w'].includes(k))) e.preventDefault();
         });
         // Saat layar kuis ditutup (selesai/kumpul), matikan pengawas & overlay
         new MutationObserver(() => {
@@ -6777,8 +6808,31 @@ D. Medan</pre>
             }
         }).observe(document.getElementById('viewKuisPengerjaan'), { attributes: true, attributeFilter: ['class'] });
 
+        // ---- Esc / X layar penuh dibuat tidak berguna: klik atau tombol apa pun langsung masuk layar penuh lagi ----
+        function paksaLayarPenuh() {
+            if (pengawasAktif() && adaFullscreen() && !document.fullscreenElement && !document.webkitFullscreenElement) mintaFullscreen();
+        }
+        ['pointerdown', 'click', 'keydown', 'keyup', 'touchstart'].forEach(ev => document.addEventListener(ev, paksaLayarPenuh, true));
+        // Kalau Esc/X sempat keluar dari layar penuh: coba masuk lagi seketika (berhasil bila dipicu klik/tombol)
+        ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => { setTimeout(paksaLayarPenuh, 50); }));
+
+        // ---- Pemeriksa tambahan khusus komputer ----
+        function cekLayarKedua() {
+            try { if (modeKomputer() && pengawasAktif() && window.screen && window.screen.isExtended) kunciKuis('Terdeteksi lebih dari satu layar/monitor.'); } catch (e) {}
+        }
+        try { if (window.screen && window.screen.addEventListener) window.screen.addEventListener('change', cekLayarKedua); } catch (e) {}
+        function cekDevTools() {
+            if (!modeKomputer() || !pengawasAktif() || G_KuisTerkunci) return;
+            const fs = document.fullscreenElement || document.webkitFullscreenElement;
+            if (!fs) return;
+            if ((window.outerWidth - window.innerWidth) > 200 || (window.outerHeight - window.innerHeight) > 200) kunciKuis('Terdeteksi panel Developer Tools / jendela tambahan.');
+        }
+        setInterval(() => { cekLayarKedua(); cekDevTools(); }, 1500);
+        window.addEventListener('beforeprint', () => { if (pengawasAktif()) kunciKuis('Mencoba mencetak halaman.'); });
+        ['dragstart', 'drop'].forEach(ev => document.addEventListener(ev, e => { if (pengawasAktif()) e.preventDefault(); }));
+
         // ---- Esc ditahan (Chrome/Edge/Android Chrome): Esc singkat tidak bisa keluar layar penuh ----
-        function kunciEsc() { try { if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock(['Escape']).catch(() => {}); } catch (e) {} }
+        function kunciEsc() { try { if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock().catch(() => {}); } catch (e) {} }
         function bukaKunciEsc() { try { if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock(); } catch (e) {} }
         ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => {
             if (document.fullscreenElement || document.webkitFullscreenElement) { if (pengawasAktif()) kunciEsc(); } else bukaKunciEsc();
