@@ -1962,6 +1962,7 @@
 
         async function submitLMS(e) {
             e.preventDefault();
+            if (G_CurrentUser && G_CurrentUser.role === 'guru' && !v('lms_mapel')) return Swal.fire('Mapel Belum Diatur', 'Akun Anda belum memiliki mata pelajaran. Hubungi admin untuk mengaturnya.', 'warning');
             const btn = document.getElementById('btnLMS');
             const fileInput = document.getElementById('lms_file');
             
@@ -2181,7 +2182,16 @@
         // Guru hanya melihat mapel yang diampunya di form Tugas &amp; Kuis (akun guru tanpa mapel = semua mapel).
         function terapkanBatasMapelGuru() {
             const daftar = mapelGuruLogin();
-            if (daftar.length === 0) return;
+            if (daftar.length === 0) {
+                // Guru yang mapelnya belum diatur admin: tidak boleh memilih mapel apa pun (bukan "semua mapel").
+                if (G_CurrentUser && G_CurrentUser.role === 'guru') {
+                    ['lms_mapel', 'kuis_mapel'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.innerHTML = '<option value="" disabled selected>Belum ada mapel diatur - hubungi admin</option>';
+                    });
+                }
+                return;
+            }
             ['lms_mapel', 'kuis_mapel'].forEach(id => {
                 const el = document.getElementById(id); if (!el) return;
                 [...el.options].forEach(o => { if (!daftar.includes(o.value)) el.removeChild(o); });
@@ -6232,6 +6242,7 @@ D. Medan</pre>
 
         function submitFormKuis(e) {
             e.preventDefault();
+            if (G_CurrentUser && G_CurrentUser.role === 'guru' && !v('kuis_mapel')) return Swal.fire('Mapel Belum Diatur', 'Akun Anda belum memiliki mata pelajaran. Hubungi admin untuk mengaturnya.', 'warning');
             let soal;
             try {
                 soal = ambilSoalDariBuilder();
