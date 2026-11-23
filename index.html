@@ -616,6 +616,13 @@
 
                     <!-- TAB: KUIS ONLINE (E-LEARNING) -->
                     <div id="dashKuis" class="admin-tab hidden space-y-4 sm:space-y-6 h-full flex-col">
+                        <div id="kodeKuisPanel" class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 shrink-0">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-3">
+                                <h3 class="font-bold text-sm sm:text-base text-amber-800"><i class="fas fa-key mr-1"></i> Kode Ujian Saya <span class="font-normal text-xs text-amber-600">(berganti otomatis tiap 10 menit)</span></h3>
+                                <span class="text-[11px] text-amber-700">Berikan ke siswa yang meminta kode masuk/keluar ujian.</span>
+                            </div>
+                            <div id="kodeKuisIsi" class="grid grid-cols-1 sm:grid-cols-2 gap-3"><p class="text-xs text-amber-700">Memuat kode...</p></div>
+                        </div>
                         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-5 shrink-0 relative">
                             <div id="floatCancelEditKuis" class="hidden absolute top-3 right-3 z-10"><button type="button" onclick="resetFormKuis()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm text-xs transition active:scale-95 flex items-center gap-1"><i class="fas fa-times"></i> Batal Edit</button></div>
                             <h3 class="font-bold text-base sm:text-lg mb-3 sm:mb-4 text-gray-800 border-b pb-2"><i class="fas fa-file-circle-question text-amber-500 mr-2"></i> Buat Kuis Online (Pilihan Ganda)</h3>
@@ -633,7 +640,7 @@
                                 </div>
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                                     <div class="col-span-2"><label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Sandi Kuis <span class="normal-case font-normal text-gray-400">(wajib diisi siswa saat mulai)</span></label><input type="text" id="kuis_sandi" required placeholder="cth: bk2024" class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"></div>
-                                    <div class="col-span-2"><label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Kode Buka Kunci <span class="normal-case font-normal text-gray-400">(rahasia guru, untuk membuka siswa yang terkunci)</span></label><input type="text" id="kuis_kode_buka" required placeholder="cth: 7391" class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"></div>
+                                    <div class="col-span-2 flex items-end pb-2.5"><label class="flex items-start gap-2 text-xs sm:text-sm font-medium text-gray-600 cursor-pointer"><input type="checkbox" id="kuis_kunci_ujian" checked class="w-4 h-4 mt-0.5 rounded text-amber-600 focus:ring-amber-500"> <span>Mode Ujian Terkunci <span class="block text-[11px] font-normal text-gray-400">Kode masuk/keluar otomatis berganti tiap 10 menit (lihat panel Kode Ujian)</span></span></label></div>
                                 </div>
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                                     <div><label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Durasi (menit)</label><input type="number" id="kuis_durasi" min="1" value="10" required class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-amber-500 outline-none"></div>
@@ -6046,7 +6053,7 @@ D. Medan</pre>
             document.getElementById('kuis_kunci').checked = (row[7] === 'YA');
             document.getElementById('kuis_acak').checked = (row[8] === 'YA');
             setV('kuis_sandi', row[11] || '');
-            setV('kuis_kode_buka', row[12] || '');
+            document.getElementById('kuis_kunci_ujian').checked = !!row[12] && String(row[12]).toUpperCase() !== 'TIDAK';
 
             let soal = [];
             try { soal = JSON.parse(row[10] || '[]'); } catch (e) {}
@@ -6081,7 +6088,7 @@ D. Medan</pre>
                 tampilkanKunci: document.getElementById('kuis_kunci').checked,
                 acakSoal: document.getElementById('kuis_acak').checked,
                 sandi: v('kuis_sandi'),
-                kodeBuka: v('kuis_kode_buka'),
+                kodeBuka: document.getElementById('kuis_kunci_ujian').checked ? 'YA' : 'TIDAK',
                 pelapor: G_CurrentUser.nama,
                 soal: soal
             };
@@ -6123,9 +6130,65 @@ D. Medan</pre>
         }
 
         // ================= GURU: DAFTAR KUIS & REKAP HASIL =================
+        // ================= GURU: PANEL KODE UJIAN (BERGANTI TIAP 10 MENIT) =================
+        let G_KodeKuis = [], G_KodeKuisLoading = false, G_KodeKuisTerakhir = 0;
+
+        function muatKodeKuisGuru() {
+            if (G_KodeKuisLoading || !G_CurrentUser || !document.getElementById('kodeKuisIsi')) return;
+            G_KodeKuisLoading = true; G_KodeKuisTerakhir = Date.now();
+            const selesai = (items) => {
+                G_KodeKuisLoading = false;
+                G_KodeKuis = (items || []).map(i => ({ id: i.id, judul: i.judul, kelas: i.kelas, kode: i.kode, habis: Date.now() + i.sisaDetik * 1000 }));
+                renderKodeKuisGuru();
+            };
+            if (typeof google !== 'undefined' && google.script) {
+                google.script.run
+                    .withSuccessHandler(res => selesai(res && res.success ? res.items : []))
+                    .withFailureHandler(() => { G_KodeKuisLoading = false; })
+                    .getKodeKuisGuru(G_CurrentUser.nama);
+            } else {
+                // Mode simulasi (tanpa server)
+                selesai(G_Kuis.filter(k => k[9] === G_CurrentUser.nama && k[12] && String(k[12]).toUpperCase() !== 'TIDAK')
+                    .map(k => ({ id: k[1], judul: k[2], kelas: k[3], kode: '000000', sisaDetik: 600 })));
+            }
+        }
+
+        function renderKodeKuisGuru() {
+            const wrap = document.getElementById('kodeKuisIsi');
+            if (!wrap) return;
+            if (G_KodeKuis.length === 0) {
+                wrap.innerHTML = '<p class="text-xs text-amber-700">Belum ada kuis milik Anda dengan Mode Ujian Terkunci aktif.</p>';
+                return;
+            }
+            wrap.innerHTML = G_KodeKuis.map((k, i) => `
+                <div class="bg-white border border-amber-200 rounded-xl p-3 flex items-center justify-between gap-3 shadow-sm">
+                    <div class="min-w-0">
+                        <p class="font-bold text-sm text-gray-800 truncate">${rekapEsc(k.judul)}</p>
+                        <p class="text-[11px] text-gray-400 truncate">${rekapEsc(k.kelas || 'Umum')} &bull; ganti dalam <span id="kkSisa${i}" class="font-bold text-amber-600">--:--</span></p>
+                    </div>
+                    <div id="kkKode${i}" class="font-mono font-extrabold text-2xl tracking-[0.2em] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-1.5 shrink-0">${k.kode.slice(0, 3)} ${k.kode.slice(3)}</div>
+                </div>`).join('');
+            tickKodeKuisGuru();
+        }
+
+        function tickKodeKuisGuru() {
+            const dash = document.getElementById('dashKuis');
+            if (!dash || dash.classList.contains('hidden') || !G_CurrentUser) return;
+            const sekarang = Date.now();
+            if (G_KodeKuis.some(k => k.habis <= sekarang) || sekarang - G_KodeKuisTerakhir > 60000) { muatKodeKuisGuru(); }
+            G_KodeKuis.forEach((k, i) => {
+                const el = document.getElementById('kkSisa' + i);
+                if (!el) return;
+                const d = Math.max(0, Math.round((k.habis - sekarang) / 1000));
+                el.innerText = String(Math.floor(d / 60)).padStart(2, '0') + ':' + String(d % 60).padStart(2, '0');
+            });
+        }
+        setInterval(tickKodeKuisGuru, 1000);
+
         function renderKuisAdminList() {
             const wrap = document.getElementById('listKuisAdmin');
             if (!wrap) return;
+            muatKodeKuisGuru();
             wrap.innerHTML = '';
             if (G_Kuis.length === 0) {
                 wrap.innerHTML = `<div class="p-8 text-center text-gray-500 border border-dashed border-gray-300 rounded-2xl bg-white"><p class="font-bold text-sm">Belum ada kuis yang diterbitkan.</p></div>`;
@@ -6623,19 +6686,38 @@ D. Medan</pre>
             simpanSesiKuis();
             tampilkanKunci(alasan);
         }
+        // Cek kode ke server (kode berganti tiap 10 menit, dibuat otomatis di server)
+        function verifikasiKodeGuru(kode) {
+            kode = (kode || '').toString().trim();
+            return new Promise(resolve => {
+                if (!kode) return resolve({ valid: false, message: 'Masukkan kode dari guru.' });
+                if (typeof google !== 'undefined' && google.script) {
+                    google.script.run
+                        .withSuccessHandler(r => resolve(r || { valid: false, message: 'Kode salah.' }))
+                        .withFailureHandler(() => resolve({ valid: false, message: 'Gagal terhubung ke server. Cek internet lalu coba lagi.' }))
+                        .verifikasiKodeKuis(G_KuisAktif ? G_KuisAktif.id : '', kode, (G_CurrentUser && G_CurrentUser.nama) || '');
+                } else {
+                    resolve({ valid: kode === '000000', message: 'Mode simulasi: gunakan kode 000000.' });
+                }
+            });
+        }
         function bukaKunciKuis() {
-            const val = (document.getElementById('kuisKunciInput').value || '').trim();
-            if (val !== G_KuisKode.toString().trim()) { document.getElementById('kuisKunciErr').classList.remove('hidden'); return; }
-            G_KuisTerkunci = false;
-            document.getElementById('kuisKunciOverlay').classList.add('hidden');
-            simpanSesiKuis();
-            mintaFullscreen();
-            setTimeout(cekGateFullscreen, 700);
-            tickKuis();
+            const err = document.getElementById('kuisKunciErr');
+            err.classList.add('hidden');
+            verifikasiKodeGuru(document.getElementById('kuisKunciInput').value).then(r => {
+                if (!r.valid) { err.innerText = r.message || 'Kode salah.'; err.classList.remove('hidden'); return; }
+                G_KuisTerkunci = false;
+                document.getElementById('kuisKunciOverlay').classList.add('hidden');
+                simpanSesiKuis();
+                mintaFullscreen();
+                setTimeout(cekGateFullscreen, 700);
+                tickKuis();
+            });
         }
         // Dipanggil dari jalankanSesiKuis (sebelum render pertama)
         function aktifkanPengawasKuis(kuisRow) {
-            G_KuisKode = (kuisRow[12] || '').toString();
+            const modeM = (kuisRow[12] || '').toString().trim();
+            G_KuisKode = (modeM && modeM.toUpperCase() !== 'TIDAK') ? 'AKTIF' : ''; // kode asli dibuat & dicek di server
             G_KuisTerkunci = false; G_KuisPelanggaran = 0;
             mintaFullscreen(); // langsung layar penuh saat ujian dimulai
             setTimeout(cekGateFullscreen, 700);
@@ -6664,7 +6746,8 @@ D. Medan</pre>
         window.addEventListener('popstate', () => {
             if (!pengawasAktif()) return;
             try { history.pushState({ kuis: 1 }, '', location.href); } catch (e) {}
-            kunciKuis('Tombol kembali ditekan.');
+            // Tombol Kembali diabaikan (bukan pelanggaran): cukup diingatkan lewat toast
+            try { Swal.fire({ toast: true, position: 'top', icon: 'info', title: 'Tombol kembali dinonaktifkan. Gunakan tombol Keluar + kode guru.', showConfirmButton: false, timer: 2500 }); } catch (e) {}
         });
         // Keluar dari layar penuh (hanya jika perangkat mendukung; iPhone Safari tidak)
         ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => {
@@ -6678,7 +6761,7 @@ D. Medan</pre>
         document.addEventListener('keydown', e => {
             if (!pengawasAktif()) return;
             const k = (e.key || '').toLowerCase();
-            if (e.key === 'F12' || (e.ctrlKey && ['p', 's', 'u'].includes(k)) || (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(k))) e.preventDefault();
+            if (e.key === 'Escape' || e.key === 'F12' || (e.ctrlKey && ['p', 's', 'u'].includes(k)) || (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(k))) e.preventDefault();
         });
         // Saat layar kuis ditutup (selesai/kumpul), matikan pengawas & overlay
         new MutationObserver(() => {
@@ -6710,11 +6793,11 @@ D. Medan</pre>
                 inputPlaceholder: perluKode ? 'Kode dari guru' : undefined,
                 inputAttributes: { autocapitalize: 'off', autocorrect: 'off', autocomplete: 'off' },
                 preConfirm: (value) => {
-                    if (perluKode && (value || '').toString().trim() !== G_KuisKode.toString().trim()) {
-                        Swal.showValidationMessage('Kode salah. Minta kode keluar ke guru.');
-                        return false;
-                    }
-                    return true;
+                    if (!perluKode) return true;
+                    return verifikasiKodeGuru(value).then(r => {
+                        if (!r.valid) { Swal.showValidationMessage(r.message || 'Kode salah. Minta kode keluar ke guru.'); return false; }
+                        return true;
+                    });
                 }
             }).then(res => {
                 if (!res.isConfirmed) return;
@@ -7075,11 +7158,11 @@ D. Medan</pre>
                     inputPlaceholder: (KUIS_KODE_UNTUK_SELESAI && G_KuisKode) ? 'Kode keluar dari guru' : undefined,
                     inputAttributes: { autocapitalize: 'off', autocorrect: 'off', autocomplete: 'off' },
                     preConfirm: (value) => {
-                        if (KUIS_KODE_UNTUK_SELESAI && G_KuisKode && (value || '').toString().trim() !== G_KuisKode.toString().trim()) {
-                            Swal.showValidationMessage('Kode salah. Minta kode keluar ke guru.');
-                            return false;
-                        }
-                        return true;
+                        if (!(KUIS_KODE_UNTUK_SELESAI && G_KuisKode)) return true;
+                        return verifikasiKodeGuru(value).then(r => {
+                            if (!r.valid) { Swal.showValidationMessage(r.message || 'Kode salah. Minta kode keluar ke guru.'); return false; }
+                            return true;
+                        });
                     }
                 }).then(res => { if (res.isConfirmed) prosesKumpul(); });
             }
