@@ -6673,6 +6673,12 @@ D. Medan</pre>
             const v = document.getElementById('viewKuisPengerjaan');
             return !!(G_KuisAktif && G_KuisKode && v && !v.classList.contains('hidden'));
         }
+        // Dianggap layar penuh jika: Fullscreen API aktif, ATAU jendela memenuhi seluruh layar
+        // (mode kiosk Chrome / F11 / Safe Exam Browser). Mode kiosk tidak punya tab, address bar, maupun tombol X.
+        function sudahFull() {
+            if (document.fullscreenElement || document.webkitFullscreenElement) return true;
+            try { return window.innerWidth >= screen.width - 2 && window.innerHeight >= screen.height - 2; } catch (e) { return false; }
+        }
         function adaFullscreen() { return !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen); }
         function mintaFullscreen() {
             const el = document.documentElement;
@@ -6685,7 +6691,7 @@ D. Medan</pre>
             const o = document.getElementById('kuisFsOverlay');
             if (!o) return;
             if (!pengawasAktif() || !adaFullscreen()) { o.classList.add('hidden'); return; }
-            const fs = document.fullscreenElement || document.webkitFullscreenElement;
+            const fs = sudahFull();
             o.classList.toggle('hidden', !!fs || G_KuisTerkunci);
         }
         function masukFullscreenKuis() { mintaFullscreen(); setTimeout(cekGateFullscreen, 500); }
@@ -6782,7 +6788,7 @@ D. Medan</pre>
         });
         // Keluar dari layar penuh (hanya jika perangkat mendukung; iPhone Safari tidak)
         ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, () => {
-            if (pengawasAktif() && adaFullscreen() && !document.fullscreenElement && !document.webkitFullscreenElement) kunciKuis('Kamu keluar dari layar penuh.');
+            if (pengawasAktif() && adaFullscreen() && !sudahFull()) kunciKuis('Kamu keluar dari layar penuh.');
             setTimeout(cekGateFullscreen, 100);
         }));
         // Blok salin / tempel / klik kanan / seleksi teks di layar kuis
@@ -6810,7 +6816,7 @@ D. Medan</pre>
 
         // ---- Esc / X layar penuh dibuat tidak berguna: klik atau tombol apa pun langsung masuk layar penuh lagi ----
         function paksaLayarPenuh() {
-            if (pengawasAktif() && adaFullscreen() && !document.fullscreenElement && !document.webkitFullscreenElement) mintaFullscreen();
+            if (pengawasAktif() && adaFullscreen() && !sudahFull()) mintaFullscreen();
         }
         ['pointerdown', 'click', 'keydown', 'keyup', 'touchstart'].forEach(ev => document.addEventListener(ev, paksaLayarPenuh, true));
         // Kalau Esc/X sempat keluar dari layar penuh: coba masuk lagi seketika (berhasil bila dipicu klik/tombol)
@@ -6823,10 +6829,10 @@ D. Medan</pre>
         try { if (window.screen && window.screen.addEventListener) window.screen.addEventListener('change', cekLayarKedua); } catch (e) {}
         function cekDevTools() {
             if (!modeKomputer() || !pengawasAktif() || G_KuisTerkunci) return;
-            const fs = document.fullscreenElement || document.webkitFullscreenElement;
-            if (!fs) return;
+            if (!sudahFull()) return;
             if ((window.outerWidth - window.innerWidth) > 200 || (window.outerHeight - window.innerHeight) > 200) kunciKuis('Terdeteksi panel Developer Tools / jendela tambahan.');
         }
+        window.addEventListener('resize', () => { if (pengawasAktif() && adaFullscreen() && !sudahFull()) kunciKuis('Jendela keluar dari layar penuh.'); });
         setInterval(() => { cekLayarKedua(); cekDevTools(); }, 1500);
         window.addEventListener('beforeprint', () => { if (pengawasAktif()) kunciKuis('Mencoba mencetak halaman.'); });
         ['dragstart', 'drop'].forEach(ev => document.addEventListener(ev, e => { if (pengawasAktif()) e.preventDefault(); }));
