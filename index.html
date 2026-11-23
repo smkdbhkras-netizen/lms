@@ -6333,7 +6333,7 @@ D. Medan</pre>
                     .getKodeKuisGuru(G_CurrentUser.nama);
             } else {
                 // Mode simulasi (tanpa server)
-                selesai(G_Kuis.filter(k => k[9] === G_CurrentUser.nama && k[12] && String(k[12]).toUpperCase() !== 'TIDAK')
+                selesai(G_Kuis.filter(k => (k[9] === G_CurrentUser.nama || milikGuruLogin(k[9], k[4], k[3])) && k[12] && String(k[12]).toUpperCase() !== 'TIDAK')
                     .map(k => ({ id: k[1], judul: k[2], kelas: k[3], kode: '000000', sisaDetik: 1800 })));
             }
         }
@@ -6342,7 +6342,7 @@ D. Medan</pre>
             const wrap = document.getElementById('kodeKuisIsi');
             if (!wrap) return;
             if (G_KodeKuis.length === 0) {
-                wrap.innerHTML = '<p class="text-xs text-amber-700">Belum ada kuis milik Anda dengan Mode Ujian Terkunci aktif.</p>';
+                wrap.innerHTML = '<p class="text-xs text-amber-700">Belum ada kuis dengan Mode Ujian Terkunci aktif untuk mapel &amp; kelas Anda.</p>';
                 return;
             }
             wrap.innerHTML = G_KodeKuis.map((k, i) => `
