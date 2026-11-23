@@ -2262,7 +2262,7 @@
                 switchAdminTab('dashLMS');
                 terapkanBatasMapelGuru();
                 const mpl = mapelGuruLogin();
-                if (headerProfile) headerProfile.innerHTML = `<i class="fas fa-user-circle mr-2 text-lg text-gray-400"></i> ${G_CurrentUser.nama}${mpl.length ? ` <span class="ml-2 text-[11px] font-semibold text-purple-600 bg-purple-50 border border-purple-100 rounded-full px-2 py-0.5">${rekapEsc(mpl.join(', '))}</span>` : ''}`;
+                if (headerProfile) headerProfile.innerHTML = `<i class="fas fa-user-circle mr-2 text-lg text-gray-400"></i> ${G_CurrentUser.nama}${mpl.length ? ` <span class="ml-2 text-[11px] font-semibold text-purple-600 bg-purple-50 border border-purple-100 rounded-full px-2 py-0.5">${mpl.map(m => rekapEsc(m) + labelKelasMapel(G_CurrentUser.kelasMapel, m)).join(', ')}</span>` : ''}`;
             } else {
                 allTabs.forEach(tab => document.querySelectorAll(`[data-tab="${tab}"]`).forEach(el => el.classList.remove('hidden')));
                 switchAdminTab('dashHome'); 
