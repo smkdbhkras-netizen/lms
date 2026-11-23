@@ -815,7 +815,7 @@
                                </div>
                                <div class="sm:col-span-2 md:col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Nama Pemilik</label><input type="text" id="akun_nama" required class="w-full border border-gray-200 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-slate-500 outline-none"></div>
                                <div id="akunMapelWrap" class="hidden sm:col-span-2 md:col-span-5 border border-blue-100 bg-blue-50/40 rounded-xl p-3">
-                                   <label class="block text-xs font-bold text-blue-700 mb-2 uppercase"><i class="fas fa-book mr-1"></i> Mapel yang Diampu <span class="normal-case font-normal text-gray-500">(centang satu atau lebih; guru hanya bisa membuat tugas &amp; kuis untuk mapel ini)</span></label>
+                                   <label class="block text-xs font-bold text-blue-700 mb-2 uppercase"><i class="fas fa-book mr-1"></i> Mapel yang Diampu <span class="normal-case font-normal text-gray-500">(centang satu atau lebih; guru hanya bisa membuat tugas &amp; kuis untuk mapel ini. Setelah dicentang, pilih tingkat kelas yang diajar; kosongkan = semua kelas)</span></label>
                                    <div id="akunMapelList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1.5"></div>
                                </div>
                                <div class="sm:col-span-2 md:col-span-1"><button type="submit" id="btnAkun" class="w-full bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-bold p-2.5 rounded-lg text-sm transition shadow-sm"><i class="fas fa-save mr-1"></i> Buat Akun</button></div>
@@ -1840,7 +1840,7 @@
             else if (type === 'akun') {
                 row = G_Akun[originalIndex];
                 setV('akun_user', row[1]); setV('akun_pass', row[2]); setV('akun_role', row[3]); setV('akun_nama', row[4]);
-                toggleMapelAkun(); setMapelAkunDipilih(row[5]);
+                toggleMapelAkun(); setMapelAkunDipilih(row[5], row[6]);
                 switchAdminTab('dashAkun');
                 document.getElementById('btnAkun').innerHTML = '<i class="fas fa-save mr-1"></i> Update';
                 document.getElementById('floatCancelEditAkun').classList.remove('hidden');
@@ -1950,9 +1950,9 @@
 
         function submitAkun(e) { 
             e.preventDefault(); 
-            let data = { user: v('akun_user'), pass: v('akun_pass'), role: v('akun_role'), nama: v('akun_nama'), mapel: '' };
+            let data = { user: v('akun_user'), pass: v('akun_pass'), role: v('akun_role'), nama: v('akun_nama'), mapel: '', kelasMapel: '' };
             if (data.role === 'guru') {
-                data.mapel = ambilMapelAkunDipilih().join(', ');
+                data.mapel = ambilMapelAkunDipilih().join(', '); data.kelasMapel = ambilKelasAkunDipilih();
                 if (!data.mapel) return Swal.fire('Mapel Belum Dipilih', 'Centang minimal satu mapel yang diampu guru ini.', 'warning');
             }
             let funcName = (EDIT_MODE.active && EDIT_MODE.type === 'akun') ? 'updateAkun' : 'simpanAkun';
@@ -2129,12 +2129,14 @@
 
         // ================= LOGIN GURU PER MAPEL =================
         // Daftar mapel master diambil sekali dari pilihan di form LMS (sebelum dibatasi).
-        let G_MapelDaftar = null, G_MapelHTML = '';
+        let G_MapelDaftar = null, G_MapelHTML = '', G_KelasHTML = '';
         function ambilMapelSemua() {
             if (G_MapelDaftar) return;
             const sel = document.getElementById('lms_mapel');
             G_MapelHTML = sel ? sel.innerHTML : '';
             G_MapelDaftar = sel ? [...sel.options].map(o => o.value) : [];
+            const ks = document.getElementById('lms_kelas');
+            if (ks && !G_KelasHTML) G_KelasHTML = ks.innerHTML;
         }
         function mapelGuruLogin() {
             if (!G_CurrentUser || G_CurrentUser.role !== 'guru') return [];
@@ -2142,7 +2144,39 @@
         }
         function pulihkanMapelSemua() {
             ambilMapelSemua();
-            ['lms_mapel', 'kuis_mapel'].forEach(id => { const el = document.getElementById(id); if (el && G_MapelHTML) el.innerHTML = G_MapelHTML; });
+            ['lms_mapel', 'kuis_mapel'].forEach(id => { const el = document.getElementById(id); if (el && G_MapelHTML) el.innerHTML = G_MapelHTML; if (el) el.onchange = null; });
+            ['lms_kelas', 'kuis_kelas'].forEach(id => { const el = document.getElementById(id); if (el && G_KelasHTML) el.innerHTML = G_KelasHTML; });
+        }
+        // ---- Batas KELAS per mapel untuk guru. Format kolom Kelas di DataAkun: "Mapel=X,XII;Mapel2=XI" (X=10, XI=11, XII=12, Jauh=Kelas Jauh) ----
+        const TINGKAT_ANGKA = { 'X': '10', 'XI': '11', 'XII': '12' };
+        function parseKelasMapel(teks) {
+            const o = {};
+            String(teks || '').split(';').forEach(p => {
+                const i = p.lastIndexOf('='); if (i < 1) return;
+                const m = p.slice(0, i).trim();
+                const t = p.slice(i + 1).split(',').map(x => x.trim()).filter(Boolean);
+                if (m && t.length) o[m] = t;
+            });
+            return o;
+        }
+        function labelKelasMapel(teks, mapel) {
+            const t = parseKelasMapel(teks)[mapel];
+            return t ? ` <b>(${rekapEsc(t.join(', '))})</b>` : '';
+        }
+        function filterKelasGuru(mapelId, kelasId) {
+            const m = document.getElementById(mapelId), k = document.getElementById(kelasId);
+            if (!m || !k || !G_KelasHTML) return;
+            const cur = k.value;
+            k.innerHTML = G_KelasHTML;
+            if (!G_CurrentUser || G_CurrentUser.role !== 'guru') return;
+            const t = parseKelasMapel(G_CurrentUser.kelasMapel)[m.value];
+            if (!t) return; // tidak diatur = semua kelas
+            [...k.querySelectorAll('option')].forEach(o => {
+                const ok = t.some(x => x === 'Jauh' ? /^Kelas Jauh/.test(o.value) : new RegExp('(^|\\D)' + (TINGKAT_ANGKA[x] || '#') + '(\\D|$)').test(o.value));
+                if (!ok) o.remove();
+            });
+            [...k.querySelectorAll('optgroup')].forEach(g => { if (!g.querySelector('option')) g.remove(); });
+            if ([...k.options].some(o => o.value === cur)) k.value = cur; else k.selectedIndex = 0;
         }
         // Guru hanya melihat mapel yang diampunya di form Tugas &amp; Kuis (akun guru tanpa mapel = semua mapel).
         function terapkanBatasMapelGuru() {
@@ -2153,24 +2187,49 @@
                 [...el.options].forEach(o => { if (!daftar.includes(o.value)) el.removeChild(o); });
                 daftar.forEach(m => { if (![...el.options].some(o => o.value === m)) el.add(new Option(m, m)); });
             });
+            [['lms_mapel', 'lms_kelas'], ['kuis_mapel', 'kuis_kelas']].forEach(([mi, ki]) => {
+                const el = document.getElementById(mi); if (!el) return;
+                el.onchange = () => filterKelasGuru(mi, ki);
+                filterKelasGuru(mi, ki);
+            });
         }
         function bangunPilihanMapelAkun() {
             ambilMapelSemua();
             const box = document.getElementById('akunMapelList');
             if (!box || box.children.length) return;
-            box.innerHTML = G_MapelDaftar.map(m => `<label class="flex items-center gap-2 text-xs sm:text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="akunMapelCb w-4 h-4 rounded text-blue-600 focus:ring-blue-500" value="${rekapEsc(m)}"> ${rekapEsc(m)}</label>`).join('');
+            box.innerHTML = G_MapelDaftar.map(m => `<div class="akunMapelRow"><label class="flex items-center gap-2 text-xs sm:text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="akunMapelCb w-4 h-4 rounded text-blue-600 focus:ring-blue-500" value="${rekapEsc(m)}"> ${rekapEsc(m)}</label><div class="akunTingkat hidden ml-6 mt-0.5 mb-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-600">${['X', 'XI', 'XII', 'Jauh'].map(t => `<label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="akunTkCb w-3.5 h-3.5 rounded text-emerald-600" data-t="${t}"> ${t === 'Jauh' ? 'Kelas Jauh' : 'Kelas ' + t}</label>`).join('')}</div></div>`).join('');
+            box.addEventListener('change', e => {
+                if (!e.target.classList.contains('akunMapelCb')) return;
+                const row = e.target.closest('.akunMapelRow');
+                row.querySelector('.akunTingkat').classList.toggle('hidden', !e.target.checked);
+                if (!e.target.checked) row.querySelectorAll('.akunTkCb').forEach(x => x.checked = false);
+            });
         }
         function toggleMapelAkun() {
             const wrap = document.getElementById('akunMapelWrap'); if (!wrap) return;
             const guru = (document.getElementById('akun_role') || {}).value === 'guru';
             wrap.classList.toggle('hidden', !guru);
             if (guru) bangunPilihanMapelAkun();
-            else document.querySelectorAll('.akunMapelCb').forEach(cb => cb.checked = false);
+            else document.querySelectorAll('.akunMapelCb, .akunTkCb').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.akunMapelRow').forEach(r => r.querySelector('.akunTingkat').classList.toggle('hidden', !r.querySelector('.akunMapelCb').checked));
         }
         function ambilMapelAkunDipilih() { return [...document.querySelectorAll('.akunMapelCb')].filter(cb => cb.checked).map(cb => cb.value); }
-        function setMapelAkunDipilih(teks) {
+        function ambilKelasAkunDipilih() {
+            return [...document.querySelectorAll('.akunMapelRow')].map(r => {
+                const cb = r.querySelector('.akunMapelCb'); if (!cb.checked) return '';
+                const t = [...r.querySelectorAll('.akunTkCb')].filter(x => x.checked).map(x => x.dataset.t);
+                return t.length ? cb.value + '=' + t.join(',') : '';
+            }).filter(Boolean).join(';');
+        }
+        function setMapelAkunDipilih(teks, kelasTeks) {
             const daftar = String(teks || '').split(',').map(m => m.trim()).filter(Boolean);
-            document.querySelectorAll('.akunMapelCb').forEach(cb => { cb.checked = daftar.includes(cb.value); });
+            const km = parseKelasMapel(kelasTeks);
+            document.querySelectorAll('.akunMapelRow').forEach(r => {
+                const cb = r.querySelector('.akunMapelCb');
+                cb.checked = daftar.includes(cb.value);
+                r.querySelector('.akunTingkat').classList.toggle('hidden', !cb.checked);
+                r.querySelectorAll('.akunTkCb').forEach(x => { x.checked = !!(km[cb.value] && km[cb.value].includes(x.dataset.t)); });
+            });
         }
         function milikGuruLogin(pembuat) {
             // Guru hanya melihat tugas/kuis buatannya sendiri; admin melihat semuanya.
@@ -2391,7 +2450,7 @@
                 <td class="p-3 font-bold text-sm text-gray-800">${row[1] || '-'}</td>
                 <td class="p-3 text-xs"><span class="px-2 py-1 rounded-full font-bold ${row[3]==='admin'?'bg-emerald-100 text-emerald-700':(row[3]==='guru'?'bg-blue-100 text-blue-700':'bg-slate-100 text-slate-600')}">${row[3] ? row[3].toUpperCase() : '-'}</span></td>
                 <td class="p-3 text-sm text-gray-600">${row[4] || '-'}</td>
-                <td class="p-3 text-xs text-gray-600">${row[3] === 'guru' ? (row[5] ? String(row[5]).split(',').map(m => `<span class="inline-block bg-purple-50 text-purple-700 border border-purple-100 rounded px-1.5 py-0.5 mr-1 mb-1">${rekapEsc(m.trim())}</span>`).join('') : '<span class="text-amber-600 font-bold">Belum diatur</span>') : '-'}</td>
+                <td class="p-3 text-xs text-gray-600">${row[3] === 'guru' ? (row[5] ? String(row[5]).split(',').map(m => `<span class="inline-block bg-purple-50 text-purple-700 border border-purple-100 rounded px-1.5 py-0.5 mr-1 mb-1">${rekapEsc(m.trim())}${labelKelasMapel(row[6], m.trim())}</span>`).join('') : '<span class="text-amber-600 font-bold">Belum diatur</span>') : '-'}</td>
                 <td class="p-3 text-center align-middle">
                     <div class="flex justify-center gap-1">
                         <button onclick="editData('akun', ${idx})" title="Edit Data" class="bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white border border-blue-200 w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition active:scale-95"><i class="fas fa-edit"></i></button>
@@ -5481,7 +5540,7 @@
                 mapelSel.innerHTML = lmsMapelSel.innerHTML;
             }
             if (kelasSel && lmsKelasSel && kelasSel.options.length === 0) {
-                kelasSel.innerHTML = lmsKelasSel.innerHTML;
+                kelasSel.innerHTML = G_KelasHTML || lmsKelasSel.innerHTML;
             }
             terapkanBatasMapelGuru();
         }
