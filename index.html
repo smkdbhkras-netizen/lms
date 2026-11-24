@@ -517,7 +517,14 @@
 
                     <!-- TAB: LMS / TUGAS -->
                     <div id="dashLMS" class="admin-tab hidden space-y-4 sm:space-y-6 h-full flex-col">
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-5 shrink-0 relative">
+                        <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
+                            <div>
+                                <h2 class="text-lg sm:text-xl font-extrabold text-gray-800"><i class="fas fa-laptop-code text-indigo-500 mr-2"></i>LMS / Penugasan</h2>
+                                <p class="text-xs text-gray-500 mt-0.5">Pantau tugas yang berjalan, atau buat tugas baru.</p>
+                            </div>
+                            <button type="button" onclick="toggleFormLMS()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold px-4 py-2.5 rounded-lg text-sm shadow-sm transition"><i class="fas fa-plus mr-1"></i> Buat Tugas</button>
+                        </div>
+                        <div id="lmsFormCard" class="hidden bg-white rounded-xl shadow-sm border border-indigo-200 p-4 sm:p-5 shrink-0 relative">
                             <div id="floatCancelEditLMS" class="hidden absolute top-3 right-3 z-10"><button type="button" onclick="batalEdit()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm text-xs transition active:scale-95 flex items-center gap-1"><i class="fas fa-times"></i> Batal Edit</button></div>
                             <h3 class="font-bold text-base sm:text-lg mb-3 sm:mb-4 text-gray-800 border-b pb-2"><i class="fas fa-laptop-code text-indigo-500 mr-2"></i> Form Penugasan</h3>
                             <form id="formLMS" onsubmit="submitLMS(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4 items-end">
@@ -620,8 +627,19 @@
                             </form>
                         </div>
                         <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden min-h-[300px]">
-                            <div class="p-3 sm:p-4 border-b bg-gray-50 shrink-0"><h3 class="font-bold text-gray-700 text-sm sm:text-base">Daftar Penugasan Aktif</h3></div>
-                            <div class="overflow-y-auto flex-1 p-3 sm:p-4"><div id="listTugasAdmin" class="space-y-3 sm:space-y-4"></div></div>
+                            <div class="p-3 sm:p-4 border-b bg-gray-50 shrink-0 space-y-3">
+                                <div class="inline-grid grid-cols-3 gap-1 bg-gray-200/70 p-1 rounded-xl w-full sm:w-auto">
+                                    <button type="button" id="tabLmsAktif" onclick="setTabLMS('aktif')" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition"></button>
+                                    <button type="button" id="tabLmsBerakhir" onclick="setTabLMS('berakhir')" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition"></button>
+                                    <button type="button" id="tabLmsSemua" onclick="setTabLMS('semua')" class="px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition"></button>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div class="relative"><i class="fas fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                                        <input type="text" id="lmsCari" oninput="renderListTugasAdmin()" placeholder="Cari judul / mapel / kelas..." class="w-full rounded-lg border border-gray-200 pl-8 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"></div>
+                                    <select id="lmsFilterMapel" onchange="renderListTugasAdmin()" class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"></select>
+                                </div>
+                            </div>
+                            <div class="overflow-y-auto flex-1 p-3 sm:p-4"><div id="listTugasAdmin" class="grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 items-start"></div></div>
                         </div>
                     </div>
 
@@ -1789,6 +1807,7 @@
             document.getElementById('formBuku').reset(); document.getElementById('btnBuku').innerHTML = defaultTexts['btnBuku'];
             populateBukuKelasOptions(''); populateBukuSiswaOptions('');
             document.getElementById('formAkun').reset(); document.getElementById('btnAkun').innerHTML = defaultTexts['btnAkun']; toggleMapelAkun();
+            tutupFormLMS();
         }
 
         function editData(type, originalIndex) {
@@ -1872,6 +1891,7 @@
                 setV('lms_kelas', kv); setV('lms_mapel', mv);
                 
                 switchAdminTab('dashLMS');
+                bukaFormLMS();
                 document.getElementById('btnLMS').innerHTML = '<i class="fas fa-save mr-1"></i> Update Tugas';
                 document.getElementById('floatCancelEditLMS').classList.remove('hidden');
             }
@@ -1962,6 +1982,12 @@
 
         async function submitLMS(e) {
             e.preventDefault();
+            if (window._lmsBusy) return;
+            window._lmsBusy = true;
+            try { await submitLMSInner(e); } finally { setTimeout(() => { window._lmsBusy = false; }, 1500); }
+        }
+        async function submitLMSInner(e) {
+            e.preventDefault();
             if (G_CurrentUser && G_CurrentUser.role === 'guru' && !v('lms_mapel')) return Swal.fire('Mapel Belum Diatur', 'Akun Anda belum memiliki mata pelajaran. Hubungi admin untuk mengaturnya.', 'warning');
             const btn = document.getElementById('btnLMS');
             const fileInput = document.getElementById('lms_file');
@@ -2043,6 +2069,7 @@
                         Swal.fire({title: 'Berhasil!', text: res.message, icon: 'success', confirmButtonColor: '#059669'});
                         if(formElement) formElement.reset();
                         if(EDIT_MODE.active) batalEdit(); 
+                        if(btnId === 'btnLMS') tutupFormLMS();
                         if(reloadDash) loadDashboardData();
                     } else Swal.fire('Gagal', res.message, 'error');
                 }).withFailureHandler(err => {
@@ -2283,20 +2310,18 @@
                         G_Angket = res.angket || [];
                         G_Kuis = res.kuis || []; G_HasilKuis = res.hasilKuis || [];
                         
-                        // CARI TUGAS SILUMAN (SYS_AKPD_DEADLINE) SECARA DIAM-DIAM DARI BACKEND
-                        let idxDeadline = G_Tugas.findIndex(t => t[1] === "SYS_AKPD_DEADLINE");
-                        if(idxDeadline !== -1) {
-                            localStorage.setItem('akpd_deadline', G_Tugas[idxDeadline][4]);
-                            G_Tugas.splice(idxDeadline, 1); // Hapus dari memori lokal agar tidak muncul di List Tugas Admin/Siswa
-                            
-                            // Set di tampilan Admin (Batas Waktu Input)
-                            if(document.getElementById('angket_deadline_input')) {
-                                try {
-                                    document.getElementById('angket_deadline_input').value = formatDateTimeLocal(parseSafeDate(localStorage.getItem('akpd_deadline')));
-                                } catch(e){}
+                        // Baris sistem JANGAN di-splice (merusak nomor baris untuk Edit/Hapus). Cukup dibaca & disembunyikan saat tampil.
+                        let idxSys = indeksTugasSistem();
+                        if (idxSys.length) {
+                            const terbaru = G_Tugas[idxSys[idxSys.length - 1]];   // paling bawah = paling baru
+                            localStorage.setItem('akpd_deadline', terbaru[4]);
+                            if (document.getElementById('angket_deadline_input')) {
+                                try { document.getElementById('angket_deadline_input').value = formatDateTimeLocal(parseSafeDate(terbaru[4])); } catch (e) {}
                             }
+                        } else {
+                            localStorage.removeItem('akpd_deadline');
                         }
-                        
+
                         if(G_CurrentUser && (G_CurrentUser.role === 'admin' || G_CurrentUser.role === 'guru')) {
                             document.getElementById('statKonseling').innerText = res.totalKonseling || 0;
                             document.getElementById('statSiswa').innerText = res.totalSiswa || 0;
@@ -2490,41 +2515,7 @@
                 </td>
             `, 'Belum ada data angket AKPD yang masuk dari siswa.');
 
-            const divTugas = document.getElementById('listTugasAdmin');
-            divTugas.innerHTML = '';
-            G_Tugas.forEach((t, idx) => {
-                if (!milikGuruLogin(t[5], t[9], t[7])) return;
-                let d = showSheetDate(t[4]);
-                let lampiranHtml = t[6] ? `<a href="${t[6]}" target="_blank" class="text-xs font-bold text-blue-600 hover:text-blue-800 mt-2 inline-flex items-center bg-blue-50 px-2 py-1 rounded"><i class="fas fa-paperclip mr-1"></i> Lampiran</a>` : '';
-                let linkHtml = t[8] ? `<a href="${t[8]}" target="_blank" class="text-xs font-bold text-purple-600 hover:text-purple-800 mt-2 ml-2 inline-flex items-center bg-purple-50 px-2 py-1 rounded"><i class="fas fa-link mr-1"></i> Link</a>` : '';
-                
-                let kumpulCount = G_KumpulTugas.filter(k => k[0] === t[1]).length;
-                let lihatKumpulBtn = `<button onclick="lihatPengumpulan('${t[1]}')" class="w-full text-xs bg-indigo-50 text-indigo-700 font-bold px-4 py-2.5 rounded-lg hover:bg-indigo-100 transition border border-indigo-200 active:scale-95"><i class="fas fa-inbox mr-1"></i> Lihat Pengumpulan <span class="bg-indigo-600 text-white rounded-full px-1.5 py-0.5 ml-1 text-[10px]">${kumpulCount}</span></button>`;
-                
-                divTugas.innerHTML += `
-                <div class="p-4 border border-gray-200 rounded-xl shadow-sm bg-white relative overflow-hidden flex flex-col group">
-                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-500"></div>
-                    
-                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-1 pl-2 pr-12">
-                        <h4 class="font-bold text-gray-800 text-base leading-tight">${t[2]}</h4>
-                        <span class="text-[10px] sm:text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100 w-max shrink-0"><i class="fas fa-stopwatch mr-1"></i> ${d}</span>
-                    </div>
-                    
-                    <div class="pl-2 mb-2">
-                        <span class="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-1 rounded border border-purple-100 inline-block"><i class="fas fa-book mr-1"></i> ${t[9] || 'Bimbingan Konseling'}</span>
-                        <span class="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-100 inline-block ml-1"><i class="fas fa-users mr-1"></i> Target: ${t[7] || 'Umum'}</span>
-                    </div>
-                    
-                    <div class="absolute top-3 right-3 flex flex-col gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                        <button onclick="editData('lms', ${idx})" title="Edit Tugas" class="bg-white border border-gray-200 text-blue-500 hover:bg-blue-50 p-1.5 rounded-lg shadow-sm"><i class="fas fa-edit"></i></button>
-                        <button onclick="hapusData('lms', ${idx})" title="Hapus Tugas" class="bg-white border border-gray-200 text-red-500 hover:bg-red-50 p-1.5 rounded-lg shadow-sm"><i class="fas fa-trash"></i></button>
-                    </div>
-
-                    <p class="text-xs sm:text-sm text-gray-600 mt-1 pl-2 line-clamp-2">${t[3]}</p>
-                    <div class="pl-2 flex flex-wrap gap-1">${lampiranHtml} ${linkHtml}</div>
-                    <div class="mt-3 border-t border-gray-100 pt-3 pl-2">${lihatKumpulBtn}</div>
-                </div>`;
-            });
+            renderListTugasAdmin();
 
             populateBukuKelasOptions();
             populateKuisSelectOptions();
@@ -2582,6 +2573,7 @@
             if(findSiswa) userKelas = findSiswa[3].toLowerCase();
             
             let filteredTugas = G_Tugas.filter(t => {
+                if (adalahTugasSistem(t)) return false;
                 let targetKelas = t[7] ? t[7].toLowerCase() : "";
                 if(!targetKelas || targetKelas === 'umum' || targetKelas === 'umum (semua kelas)') return true;
                 if(!userKelas) return false;
@@ -2716,43 +2708,191 @@
             updateAngketDeadlineTimer();
         }
 
-        // GURU: ATUR DEADLINE ANGKET
-        function setDeadlineAngket(e) {
-            e.preventDefault();
-            let dVal = document.getElementById('angket_deadline_input').value;
-            if(!dVal) return;
+        // ================= LMS / PENUGASAN: HELPER, TAMPILAN BARU, BATAS WAKTU ANGKET =================
+        const SYS_TUGAS_ID = 'SYS_AKPD_DEADLINE';
+        function adalahTugasSistem(t) { return !!t && t[1] === SYS_TUGAS_ID; }
+        function indeksTugasSistem() { const a = []; G_Tugas.forEach((t, i) => { if (adalahTugasSistem(t)) a.push(i); }); return a; }
 
-            localStorage.setItem('akpd_deadline', dVal);
-            
-            // SIMPAN KE BACKEND SEBAGAI TUGAS SILUMAN
-            let dummyData = {
-                id: "SYS_AKPD_DEADLINE", judul: "BATAS WAKTU ANGKET", deskripsi: "Sistem Tersembunyi",
-                deadline: dVal, pelapor: "SISTEM", fileBase64: "", fileName: "",
-                linkMateri: "", kelasTarget: "SISTEM", mapel: "SISTEM"
+        function panggilGAS(fn, ...args) {
+            return new Promise((resolve, reject) => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+            });
+        }
+
+        // ---- Form tugas: buka/tutup ----
+        function bukaFormLMS() {
+            const c = document.getElementById('lmsFormCard'); if (!c) return;
+            c.classList.remove('hidden');
+            try { c.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+        }
+        function tutupFormLMS() { const c = document.getElementById('lmsFormCard'); if (c) c.classList.add('hidden'); }
+        function toggleFormLMS() {
+            const c = document.getElementById('lmsFormCard'); if (!c) return;
+            if (c.classList.contains('hidden')) bukaFormLMS();
+            else if (EDIT_MODE.active && EDIT_MODE.type === 'lms') batalEdit();
+            else tutupFormLMS();
+        }
+
+        // ---- Siswa target sebuah tugas (aturan sama dengan tampilan siswa) ----
+        function siswaTargetTugas(t) {
+            const tk = String(t[7] || 'umum').toLowerCase();
+            const umum = !tk || tk === 'umum' || tk === 'umum (semua kelas)';
+            return (G_Siswa || []).filter(s => {
+                if (umum) return true;
+                const u = String(s[3] || '').toLowerCase();
+                if (!u) return false;
+                if (tk.includes(u) || u.includes(tk)) return true;
+                if ((tk.includes('kelas 10') || tk === '10' || tk === 'x') && u.match(/\b(10|x)\b/)) return true;
+                if ((tk.includes('kelas 11') || tk === '11' || tk === 'xi') && u.match(/\b(11|xi)\b/)) return true;
+                if ((tk.includes('kelas 12') || tk === '12' || tk === 'xii') && u.match(/\b(12|xii)\b/)) return true;
+                return false;
+            });
+        }
+
+        function labelSisaWaktu(ms) {
+            if (ms <= 0) return 'Berakhir';
+            const m = Math.floor(ms / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24);
+            if (d > 0) return d + ' hari lagi';
+            if (h > 0) return h + ' jam lagi';
+            return Math.max(m, 1) + ' menit lagi';
+        }
+
+        let G_LmsTab = 'aktif';
+        function setTabLMS(t) { G_LmsTab = t; renderListTugasAdmin(); }
+
+        function renderListTugasAdmin() {
+            const wrap = document.getElementById('listTugasAdmin'); if (!wrap) return;
+            const now = Date.now();
+            const q = ((document.getElementById('lmsCari') || {}).value || '').trim().toLowerCase();
+            const selMapel = document.getElementById('lmsFilterMapel');
+            const mapelPilih = selMapel ? selMapel.value : '';
+
+            let semua = [];
+            G_Tugas.forEach((t, idx) => {
+                if (adalahTugasSistem(t) || !milikGuruLogin(t[5], t[9], t[7])) return;   // idx = nomor baris ASLI di Sheet
+                const dl = parseSafeDate(t[4]).getTime();
+                semua.push({ t, idx, dl, berakhir: dl < now });
+            });
+
+            if (selMapel) {
+                const daftar = [...new Set(semua.map(x => x.t[9] || 'Bimbingan Konseling'))].sort();
+                selMapel.innerHTML = '<option value="">Semua Mapel</option>' + daftar.map(m => `<option value="${rekapEsc(m)}">${rekapEsc(m)}</option>`).join('');
+                selMapel.value = daftar.includes(mapelPilih) ? mapelPilih : '';
+            }
+            const mapelAktif = selMapel ? selMapel.value : '';
+
+            semua = semua.filter(x => {
+                if (mapelAktif && (x.t[9] || 'Bimbingan Konseling') !== mapelAktif) return false;
+                if (q && ![x.t[2], x.t[9], x.t[7]].some(v => String(v || '').toLowerCase().includes(q))) return false;
+                return true;
+            });
+
+            const nAktif = semua.filter(x => !x.berakhir).length, nAkhir = semua.length - nAktif;
+            const setTab = (id, key, label, n) => {
+                const el = document.getElementById(id); if (!el) return;
+                const on = G_LmsTab === key;
+                el.className = 'px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition ' + (on ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:text-indigo-700');
+                el.innerHTML = `${label} <span class="ml-1 text-[10px] rounded-full px-1.5 py-0.5 ${on ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-500'}">${n}</span>`;
             };
-            
-            if (typeof google !== 'undefined' && google.script) {
-                 google.script.run.withSuccessHandler(() => {
-                     Swal.fire('Berhasil!', 'Batas waktu pengisian angket AKPD telah diperbarui.', 'success');
-                 }).simpanTugas(dummyData);
-            } else {
-                 Swal.fire('Berhasil (Preview)!', 'Batas waktu pengisian angket tersimpan.', 'success');
+            setTab('tabLmsAktif', 'aktif', 'Aktif', nAktif);
+            setTab('tabLmsBerakhir', 'berakhir', 'Berakhir', nAkhir);
+            setTab('tabLmsSemua', 'semua', 'Semua', semua.length);
+
+            let tampil = semua.filter(x => G_LmsTab === 'semua' ? true : (G_LmsTab === 'aktif' ? !x.berakhir : x.berakhir));
+            tampil.sort((a, b) => G_LmsTab === 'aktif' ? a.dl - b.dl : b.dl - a.dl);   // aktif: paling mendesak di atas
+
+            if (tampil.length === 0) {
+                wrap.innerHTML = `<div class="xl:col-span-2 p-8 text-center text-gray-500 border border-dashed border-gray-300 rounded-2xl bg-white"><p class="font-bold text-sm">${G_LmsTab === 'aktif' ? 'Tidak ada tugas yang sedang berjalan.' : 'Tidak ada tugas pada tampilan ini.'}</p><button type="button" onclick="bukaFormLMS()" class="mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg text-sm"><i class="fas fa-plus mr-1"></i> Buat Tugas</button></div>`;
+                return;
+            }
+
+            wrap.innerHTML = tampil.map(({ t, idx, dl, berakhir }) => {
+                const kumpul = G_KumpulTugas.filter(k => k[0] === t[1]).length;
+                const total = siswaTargetTugas(t).length;
+                const persen = total ? Math.min(100, Math.round(kumpul / total * 100)) : 0;
+                const sisa = dl - now;
+                const hampir = !berakhir && sisa < 24 * 3600 * 1000;
+                const warna = berakhir ? 'bg-gray-400' : (hampir ? 'bg-red-500' : 'bg-indigo-500');
+                const badgeWaktu = berakhir ? 'text-gray-600 bg-gray-100 border-gray-200' : (hampir ? 'text-red-600 bg-red-50 border-red-100' : 'text-emerald-700 bg-emerald-50 border-emerald-100');
+                const tglLabel = isNaN(dl) ? '-' : new Date(dl).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+                const lampiran = t[6] ? `<a href="${rekapEsc(t[6])}" target="_blank" class="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded"><i class="fas fa-paperclip mr-1"></i>Lampiran</a>` : '';
+                const link = t[8] ? `<a href="${rekapEsc(t[8])}" target="_blank" class="text-[11px] font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded"><i class="fas fa-link mr-1"></i>Link</a>` : '';
+                return `
+                <div class="relative bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition overflow-hidden flex flex-col ${berakhir ? 'opacity-90' : ''}">
+                    <div class="absolute left-0 top-0 bottom-0 w-1 ${warna}"></div>
+                    <div class="p-3.5 pl-5 flex-1">
+                        <div class="flex items-start justify-between gap-3">
+                            <h4 class="font-bold text-gray-800 text-sm sm:text-base leading-snug">${rekapEsc(t[2])}</h4>
+                            <div class="flex gap-1 shrink-0">
+                                <button onclick="editData('lms', ${idx})" title="Edit" class="bg-white border border-gray-200 text-blue-500 hover:bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fas fa-edit text-xs"></i></button>
+                                <button onclick="hapusData('lms', ${idx})" title="Hapus" class="bg-white border border-gray-200 text-red-500 hover:bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fas fa-trash text-xs"></i></button>
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-gray-500 mt-1 truncate"><i class="fas fa-book mr-1 text-purple-400"></i>${rekapEsc(t[9] || 'Bimbingan Konseling')} &bull; <i class="fas fa-users mr-1 text-blue-400"></i>${rekapEsc(t[7] || 'Umum')}</p>
+                        <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                            <span class="text-[10px] font-bold px-2 py-1 rounded-md border ${badgeWaktu}"><i class="fas fa-stopwatch mr-1"></i>${tglLabel} &bull; ${labelSisaWaktu(sisa)}</span>
+                            ${lampiran} ${link}
+                        </div>
+                        <p class="text-xs text-gray-600 mt-2 line-clamp-2 whitespace-pre-line">${rekapEsc(t[3])}</p>
+                        <div class="mt-3">
+                            <div class="flex items-center justify-between text-xs mb-1">
+                                <span class="font-bold text-gray-700">${total ? `${kumpul}/${total} siswa sudah mengumpulkan` : `${kumpul} siswa sudah mengumpulkan`}</span>
+                                ${total ? `<span class="text-gray-400 font-bold">${persen}%</span>` : ''}
+                            </div>
+                            ${total ? `<div class="h-2 bg-gray-100 rounded-full overflow-hidden"><div class="h-full ${persen >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'} rounded-full transition-all" style="width:${persen}%"></div></div>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="lihatPengumpulan('${t[1]}')" class="w-full text-xs bg-indigo-50 text-indigo-700 font-bold px-4 py-2.5 hover:bg-indigo-100 transition border-t border-indigo-100 active:scale-[0.99]"><i class="fas fa-inbox mr-1"></i> Lihat Pengumpulan <span class="bg-indigo-600 text-white rounded-full px-1.5 py-0.5 ml-1 text-[10px]">${kumpul}</span></button>
+                </div>`;
+            }).join('');
+        }
+
+        // ---- Batas waktu angket: UPDATE satu baris (bukan tambah baru) & bersihkan duplikat ----
+        async function setDeadlineAngket(e) {
+            e.preventDefault();
+            const dVal = document.getElementById('angket_deadline_input').value;
+            if (!dVal) return;
+            localStorage.setItem('akpd_deadline', dVal);
+            if (!(typeof google !== 'undefined' && google.script)) {
+                return Swal.fire('Berhasil (Preview)!', 'Batas waktu pengisian angket tersimpan.', 'success');
+            }
+            const data = {
+                id: SYS_TUGAS_ID, judul: 'BATAS WAKTU ANGKET', deskripsi: 'Sistem Tersembunyi', deadline: dVal,
+                pelapor: 'SISTEM', fileBase64: '', fileName: '', linkMateri: '', kelasTarget: 'SISTEM', mapel: 'SISTEM'
+            };
+            Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            try {
+                const idx = indeksTugasSistem();
+                let res;
+                if (idx.length === 0) {
+                    res = await panggilGAS('simpanTugas', data);
+                } else {
+                    data.originalIndex = idx[0];
+                    res = await panggilGAS('updateTugas', data);
+                    for (let i = idx.length - 1; i >= 1; i--) await panggilGAS('hapusDataApp', 'lms', idx[i]);   // dari bawah agar nomor baris tidak bergeser
+                }
+                if (!res || !res.success) throw new Error((res && res.message) || 'Gagal menyimpan.');
+                loadDashboardData();
+                setTimeout(() => Swal.fire({ toast: true, position: 'top', icon: 'success', title: 'Batas waktu angket diperbarui', showConfirmButton: false, timer: 2200 }), 1500);
+            } catch (err) {
+                Swal.fire('Gagal', err.message || String(err), 'error');
             }
         }
 
-        // GURU: HAPUS DEADLINE ANGKET
-        function hapusDeadlineAngket() {
+        async function hapusDeadlineAngket() {
             localStorage.removeItem('akpd_deadline');
             document.getElementById('angket_deadline_input').value = '';
-            
-            let idxDeadline = G_Tugas.findIndex(t => t[1] === "SYS_AKPD_DEADLINE");
-            if (idxDeadline !== -1 && typeof google !== 'undefined' && google.script) {
-                google.script.run.withSuccessHandler(() => {
-                    Swal.fire('Dihapus!', 'Batas waktu pengisian angket AKPD telah dinonaktifkan.', 'info');
-                    loadDashboardData();
-                }).hapusDataApp('lms', idxDeadline);
-            } else {
-                Swal.fire('Dihapus!', 'Batas waktu pengisian angket AKPD telah dinonaktifkan.', 'info');
+            if (!(typeof google !== 'undefined' && google.script)) {
+                return Swal.fire('Dihapus!', 'Batas waktu pengisian angket telah dinonaktifkan.', 'info');
+            }
+            Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            try {
+                const idx = indeksTugasSistem();
+                for (let i = idx.length - 1; i >= 0; i--) await panggilGAS('hapusDataApp', 'lms', idx[i]);
+                loadDashboardData();
+                setTimeout(() => Swal.fire({ toast: true, position: 'top', icon: 'info', title: 'Batas waktu angket dinonaktifkan', showConfirmButton: false, timer: 2200 }), 1500);
+            } catch (err) {
+                Swal.fire('Gagal', err.message || String(err), 'error');
             }
         }
 
