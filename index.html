@@ -639,6 +639,7 @@
                                     <select id="lmsFilterMapel" onchange="renderListTugasAdmin()" class="w-full rounded-lg border border-gray-200 p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"></select>
                                 </div>
                             </div>
+                            <div id="lmsDobelBanner" class="hidden mx-3 sm:mx-4 mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2"></div>
                             <div class="overflow-y-auto flex-1 p-3 sm:p-4"><div id="listTugasAdmin" class="grid grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 items-start"></div></div>
                         </div>
                     </div>
@@ -2769,6 +2770,22 @@
         let G_LmsTab = 'aktif';
         function setTabLMS(t) { G_LmsTab = t; renderListTugasAdmin(); }
 
+        let G_TugasDobel = [];
+        async function bersihkanTugasDobel() {
+            const daftar = [...G_TugasDobel].sort((a, b) => b - a);   // hapus dari bawah agar nomor baris tidak bergeser
+            if (!daftar.length) return;
+            const c = await Swal.fire({ title: 'Hapus ' + daftar.length + ' data dobel?', text: 'Hanya salinan ke-2 dan seterusnya yang dihapus. Data pengumpulan siswa tidak terpengaruh.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, bersihkan', cancelButtonText: 'Batal' });
+            if (!c.isConfirmed) return;
+            Swal.fire({ title: 'Membersihkan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            try {
+                for (const i of daftar) await panggilGAS('hapusDataApp', 'lms', i);
+                loadDashboardData();
+                setTimeout(() => Swal.fire({ toast: true, position: 'top', icon: 'success', title: 'Data dobel dibersihkan', showConfirmButton: false, timer: 2200 }), 1500);
+            } catch (err) {
+                Swal.fire('Gagal', err.message || String(err), 'error');
+            }
+        }
+
         function renderListTugasAdmin() {
             const wrap = document.getElementById('listTugasAdmin'); if (!wrap) return;
             const now = Date.now();
@@ -2777,8 +2794,12 @@
             const mapelPilih = selMapel ? selMapel.value : '';
 
             let semua = [];
+            const idTerlihat = new Set(); G_TugasDobel = [];
             G_Tugas.forEach((t, idx) => {
                 if (adalahTugasSistem(t) || !milikGuruLogin(t[5], t[9], t[7])) return;   // idx = nomor baris ASLI di Sheet
+                const kunci = String(t[1]);
+                if (idTerlihat.has(kunci)) { G_TugasDobel.push(idx); return; }   // ID sama = data dobel, disembunyikan
+                idTerlihat.add(kunci);
                 const dl = parseSafeDate(t[4]).getTime();
                 semua.push({ t, idx, dl, berakhir: dl < now });
             });
@@ -2796,6 +2817,11 @@
                 return true;
             });
 
+            const bn = document.getElementById('lmsDobelBanner');
+            if (bn) {
+                bn.classList.toggle('hidden', G_TugasDobel.length === 0);
+                bn.innerHTML = G_TugasDobel.length ? `<span class="text-xs sm:text-sm font-bold text-amber-800"><i class="fas fa-triangle-exclamation mr-1"></i> Ditemukan ${G_TugasDobel.length} data tugas dobel (ID sama) di Sheet. Sudah disembunyikan dari daftar.</span><button type="button" onclick="bersihkanTugasDobel()" class="bg-amber-600 hover:bg-amber-700 active:scale-95 text-white text-xs font-bold px-3 py-2 rounded-lg whitespace-nowrap"><i class="fas fa-broom mr-1"></i> Bersihkan Dobel</button>` : '';
+            }
             const nAktif = semua.filter(x => !x.berakhir).length, nAkhir = semua.length - nAktif;
             const setTab = (id, key, label, n) => {
                 const el = document.getElementById(id); if (!el) return;
