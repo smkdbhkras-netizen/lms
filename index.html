@@ -1159,6 +1159,15 @@
                     <button onclick="switchTabPengumpulan('belum')" id="tabBelumKumpul" class="flex-1 py-3.5 px-2 text-xs sm:text-sm font-bold text-gray-500 border-b-[3px] border-transparent hover:text-indigo-600 hover:bg-indigo-50/30 transition-colors">Belum Kumpul (<span id="countBelum">0</span>)</button>
                  </div>
 
+                 <div class="bg-white border-b border-gray-200 px-3 sm:px-4 py-2.5 shrink-0 flex flex-wrap items-center gap-2">
+                    <select id="pengFilterKelas" onchange="terapkanFilterPengumpulan()" class="text-xs font-bold border border-gray-300 rounded-lg px-2.5 py-2 bg-white outline-none focus:ring-2 focus:ring-indigo-400 max-w-[48%] sm:max-w-none"><option value="">Semua Kelas</option></select>
+                    <div class="relative flex-1 min-w-[120px]">
+                        <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                        <input id="pengCari" oninput="terapkanFilterPengumpulan()" type="text" placeholder="Cari nama siswa..." class="w-full text-xs border border-gray-300 rounded-lg pl-8 pr-2 py-2 outline-none focus:ring-2 focus:ring-indigo-400">
+                    </div>
+                    <button id="btnSalinBelum" onclick="salinLaporanBelum()" class="hidden text-xs font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-3 py-2 rounded-lg transition shadow-sm whitespace-nowrap"><i class="fas fa-copy mr-1"></i> Salin Laporan Belum Kumpul</button>
+                 </div>
+
                 <div class="p-4 sm:p-5 overflow-y-auto flex-1 bg-slate-50 relative">
                     <div id="listPengumpulanSiswa" class="space-y-3 sm:space-y-4"></div>
                     <div id="listBelumMengumpulkan" class="space-y-3 sm:space-y-4 hidden"></div>
@@ -3572,7 +3581,53 @@
         }
 
         // ================= ADMIN: LIHAT PENGUMPULAN =================
+        let G_PengState = { tugas: null, missing: [] };
+        function terapkanFilterPengumpulan() {
+            const kelas = document.getElementById('pengFilterKelas').value;
+            const q = document.getElementById('pengCari').value.trim().toLowerCase();
+            const hasil = {};
+            [['listPengumpulanSiswa', 'countSudah'], ['listBelumMengumpulkan', 'countBelum']].forEach(([lid, cid]) => {
+                const box = document.getElementById(lid);
+                const visKelas = new Set();
+                let n = 0;
+                box.querySelectorAll('[data-item]').forEach(el => {
+                    const ok = (!kelas || el.dataset.kelas === kelas) && (!q || el.dataset.nama.includes(q));
+                    el.style.display = ok ? '' : 'none';
+                    if (ok) { n++; visKelas.add(el.dataset.kelas); }
+                });
+                box.querySelectorAll('[data-hdr]').forEach(el => { el.style.display = visKelas.has(el.dataset.kelas) ? '' : 'none'; });
+                if (box.querySelector('[data-item]')) {
+                    let e = box.querySelector('.pengKosong');
+                    if (!e) { e = document.createElement('div'); e.className = 'pengKosong text-center text-gray-400 text-sm py-10 italic'; e.innerText = 'Tidak ada data yang cocok dengan filter.'; box.appendChild(e); }
+                    e.style.display = n === 0 ? '' : 'none';
+                }
+                document.getElementById(cid).innerText = n;
+            });
+        }
+
+        function salinLaporanBelum() {
+            const kelas = document.getElementById('pengFilterKelas').value;
+            const q = document.getElementById('pengCari').value.trim().toLowerCase();
+            const t = G_PengState.tugas;
+            const list = (G_PengState.missing || []).filter(m => (!kelas || (m[3] || 'Tidak Diketahui') === kelas) && (!q || String(m[2] || '').toLowerCase().includes(q)));
+            if (!list.length) return Swal.fire('Info', 'Tidak ada siswa yang belum mengumpulkan pada filter ini.', 'info');
+            let dl = '';
+            if (t && t[4]) { const d = parseSafeDate(t[4]); if (!isNaN(d.getTime())) dl = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) + ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':'); }
+            let out = '*LAPORAN BELUM MENGUMPULKAN TUGAS*\n' + (t ? 'Tugas: ' + t[2] + '\n' : '') + (dl ? 'Batas waktu: ' + dl + '\n' : '') + (kelas ? 'Kelas: ' + kelas + '\n' : '');
+            const grup = {};
+            list.forEach(m => { const k = m[3] || 'Tidak Diketahui'; (grup[k] = grup[k] || []).push(m[2]); });
+            Object.keys(grup).sort().forEach(k => {
+                out += '\n*' + k + '* (' + grup[k].length + ' siswa)\n';
+                grup[k].forEach((n, i) => { out += (i + 1) + '. ' + n + '\n'; });
+            });
+            out += '\nTotal belum mengumpulkan: ' + list.length + ' siswa';
+            const ok = () => Swal.fire({ icon: 'success', title: 'Tersalin!', text: list.length + ' siswa siap ditempel (WhatsApp dll).', timer: 1600, showConfirmButton: false });
+            const fallback = () => { const ta = document.createElement('textarea'); ta.value = out; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); ok(); } catch (e) { Swal.fire('Gagal', 'Tidak bisa menyalin otomatis.', 'error'); } document.body.removeChild(ta); };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(out).then(ok).catch(fallback); else fallback();
+        }
+
         function switchTabPengumpulan(tab) {
+            document.getElementById('btnSalinBelum').classList.toggle('hidden', tab === 'sudah');
             if(tab === 'sudah') {
                 document.getElementById('listPengumpulanSiswa').classList.remove('hidden');
                 document.getElementById('listBelumMengumpulkan').classList.add('hidden');
@@ -3727,7 +3782,7 @@
                     let kelasSiswa = item.kelas;
                     
                     if (kelasSiswa !== currentClass) {
-                        listDiv.innerHTML += `<div class="bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-lg mb-3 mt-4 first:mt-0 font-bold text-indigo-800 text-xs uppercase flex items-center shadow-sm"><i class="fas fa-users mr-2 opacity-70"></i> Kelas: ${kelasSiswa}</div>`;
+                        listDiv.innerHTML += `<div data-hdr="1" data-kelas="${rekapEsc(kelasSiswa)}" class="bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-lg mb-3 mt-4 first:mt-0 font-bold text-indigo-800 text-xs uppercase flex items-center shadow-sm"><i class="fas fa-users mr-2 opacity-70"></i> Kelas: ${kelasSiswa}</div>`;
                         currentClass = kelasSiswa;
                     }
 
@@ -3762,7 +3817,7 @@
                     `;
                     
                     listDiv.innerHTML += `
-                        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition relative mb-3 ml-0 sm:ml-4">
+                        <div data-item="1" data-kelas="${rekapEsc(kelasSiswa)}" data-nama="${rekapEsc(String(k[1]).toLowerCase())}" class="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition relative mb-3 ml-0 sm:ml-4">
                             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 border-b border-gray-100 pb-3 gap-2">
                                 <h4 class="font-bold text-gray-800 text-sm flex items-center flex-wrap gap-2">
                                     <div class="bg-indigo-100 text-indigo-700 w-7 h-7 flex items-center justify-center rounded-full shrink-0"><i class="fas fa-user text-xs"></i></div> 
@@ -3817,11 +3872,11 @@
                 missingStudents.forEach(m => {
                     let k = m[3] || "Tidak Diketahui";
                     if(k !== curMissingClass) {
-                        listBelumDiv.innerHTML += `<div class="bg-red-50 border border-red-100 px-3 py-2 rounded-lg mb-3 mt-4 first:mt-0 font-bold text-red-800 text-xs uppercase flex items-center shadow-sm"><i class="fas fa-exclamation-circle mr-2 opacity-70"></i> Kelas: ${k}</div>`;
+                        listBelumDiv.innerHTML += `<div data-hdr="1" data-kelas="${rekapEsc(k)}" class="bg-red-50 border border-red-100 px-3 py-2 rounded-lg mb-3 mt-4 first:mt-0 font-bold text-red-800 text-xs uppercase flex items-center shadow-sm"><i class="fas fa-exclamation-circle mr-2 opacity-70"></i> Kelas: ${k}</div>`;
                         curMissingClass = k;
                     }
                     listBelumDiv.innerHTML += `
-                        <div class="bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center mb-2 ml-0 sm:ml-4 hover:border-red-200 transition">
+                        <div data-item="1" data-kelas="${rekapEsc(k)}" data-nama="${rekapEsc(String(m[2] || '').toLowerCase())}" class="bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center mb-2 ml-0 sm:ml-4 hover:border-red-200 transition">
                             <div class="flex items-center gap-3">
                                 <div class="bg-gray-100 text-gray-400 w-8 h-8 rounded-full flex items-center justify-center shrink-0"><i class="fas fa-user-slash text-xs"></i></div>
                                 <div>
@@ -3838,7 +3893,17 @@
             // Set Hitungan Badge di Tab
             document.getElementById('countSudah').innerText = kumpul.length;
             document.getElementById('countBelum').innerText = missingStudents.length;
-            
+
+            // State + filter kelas / nama
+            G_PengState = { tugas: objTugas, missing: missingStudents };
+            const kelasSet = new Set();
+            targetStudents.forEach(x => kelasSet.add(x[3] || 'Tidak Diketahui'));
+            kumpul.forEach(kk => { const st = G_Siswa.find(x => x[2] === kk[1]); kelasSet.add(st ? (st[3] || 'Tidak Diketahui') : 'Kelas Tidak Diketahui'); });
+            const selK = document.getElementById('pengFilterKelas');
+            selK.innerHTML = '<option value="">Semua Kelas</option>' + [...kelasSet].sort().map(c => `<option value="${rekapEsc(c)}">${rekapEsc(c)}</option>`).join('');
+            document.getElementById('pengCari').value = '';
+            terapkanFilterPengumpulan();
+
             // Reset modal selalu kebuka di tab "Sudah Kumpul" pertama kali
             switchTabPengumpulan('sudah');
 
